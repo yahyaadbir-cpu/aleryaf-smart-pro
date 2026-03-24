@@ -523,7 +523,7 @@
 
 @page {
   size: A4 portrait;
-  margin: 0;
+  margin: 8mm;
 }
 
 .print-only {
@@ -592,8 +592,8 @@
   min-width: 210mm;
   min-height: 297mm;
   background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
   overflow: hidden;
   flex: 0 0 auto;
 }
@@ -605,12 +605,14 @@
 .ipd {
   width: 100%;
   min-height: 297mm;
-  padding: 10mm 11mm 10mm;
+  padding: 14mm 14mm 12mm;
   background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.88), rgba(255, 255, 255, 1) 18%),
-    #fff;
-  color: #0f172a;
+    radial-gradient(circle at top right, rgba(14, 71, 80, 0.04), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, #fffdf9 100%);
+  color: #0f2e35;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .ipd,
@@ -618,154 +620,142 @@
   box-sizing: border-box;
 }
 
-.ipd__topbar {
-  height: 4mm;
-  margin: -10mm -11mm 8mm;
-  background: linear-gradient(90deg, #1d4ed8, #0f172a 52%, #dc2626);
-}
-
 .ipd__header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 10mm;
-  padding-bottom: 7mm;
+  align-items: flex-start;
+  gap: 12mm;
+  padding-bottom: 9mm;
+  border-bottom: 1px solid #d8c19b;
+  position: relative;
+  min-height: 34mm;
+  padding-top: 2mm;
+}
+
+.ipd__header-logo {
+  position: absolute;
+  top: 1mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 21.5mm;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .ipd__brand {
+  flex: 1;
   text-align: right;
-  max-width: 48%;
+  padding-top: 5mm;
+  position: relative;
+  z-index: 1;
 }
 
-.ipd__brand-mark {
-  display: inline-flex;
-  margin-bottom: 4mm;
-  padding: 1.6mm 3.2mm;
-  border: 1px solid #dbe7ff;
-  border-radius: 999px;
-  background: #eef4ff;
-  color: #1d4ed8;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-}
-
-.ipd__brand-ar {
+.ipd__brand-name {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   line-height: 1.05;
-  color: #0f172a;
+  color: #0e4750;
+  max-width: 88mm;
 }
 
-.ipd__brand-en {
-  margin-top: 4px;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #dc2626;
+.ipd__brand-tag {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #d5a236;
+  letter-spacing: 0.04em;
 }
 
-.ipd__title-block {
-  min-width: 62mm;
-  padding: 5mm 5.5mm;
-  border: 1px solid #dbe2ea;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  text-align: left;
+.ipd__invoice-meta {
+  min-width: 48mm;
+  text-align: right;
+  padding: 4mm 4.5mm 0 0;
+  align-self: start;
+  position: relative;
+  z-index: 1;
 }
 
-.ipd__badge {
-  display: inline-flex;
+.ipd__logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.ipd__eyebrow {
+  font-size: 10px;
+  color: #8f9baa;
   margin-bottom: 4mm;
-  padding: 1.4mm 3mm;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.03em;
 }
 
 .ipd__title {
   font-family: var(--font-display);
-  font-size: 31px;
+  font-size: 33px;
   font-weight: 800;
   line-height: 1;
-  color: #0f172a;
-}
-
-.ipd__meta-stack {
-  margin-top: 4mm;
-  display: grid;
-  gap: 2mm;
+  color: #0e4750;
+  margin: 0 0 4mm;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 2.5mm;
 }
 
 .ipd__meta-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6mm;
-  font-size: 11px;
-  color: #475569;
+  font-size: 13px;
+  color: #536273;
+  line-height: 1.8;
 }
 
-.ipd__meta-key {
-  color: #64748b;
-  font-weight: 600;
-}
-
-.ipd__meta-value {
-  color: #0f172a;
-  font-weight: 800;
+.ipd__title::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18mm;
+  height: 1px;
+  background: #d5a236;
 }
 
 .ipd__info-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid #dbe2ea;
-  border-radius: 16px;
-  overflow: hidden;
-  margin-bottom: 7mm;
-  background: #fff;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3mm;
+  margin-top: 6mm;
+  margin-bottom: 6mm;
 }
 
 .ipd__info-box {
-  padding: 10px 12px;
-  border-left: 1px solid #dbe2ea;
-  border-bottom: 1px solid #dbe2ea;
-  min-height: 23mm;
-}
-
-.ipd__info-box:nth-child(3n) {
-  border-left: none;
-}
-
-.ipd__info-box:nth-last-child(-n+3) {
-  border-bottom: none;
+  min-height: 18mm;
+  border: 1px solid #d9e0e7;
+  border-radius: 10px;
+  padding: 4mm 5mm;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .ipd__info-label {
   display: block;
-  margin-bottom: 3px;
-  font-size: 9px;
+  margin-bottom: 2mm;
+  font-size: 11px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  color: #8b98a7;
 }
 
 .ipd__info-value {
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+  color: #102a43;
 }
 
 .ipd__table-wrap {
   overflow: hidden;
-  border: 1px solid #dbe2ea;
-  border-radius: 16px;
+  border: 1px solid #d7dde3;
+  border-radius: 12px;
+  margin-top: 3mm;
   margin-bottom: 6mm;
   background: #fff;
 }
@@ -777,25 +767,29 @@
 }
 
 .ipd__table thead tr {
-  background: linear-gradient(180deg, #f8fafc, #eef2f7);
+  background: linear-gradient(180deg, #f7f8fa, #eef2f5);
 }
 
 .ipd__table th {
-  padding: 10px 7px;
-  border-bottom: 1px solid #cbd5e1;
-  font-size: 10px;
+  padding: 11px 8px;
+  border-bottom: 1px solid #d0d7df;
+  font-size: 13px;
   font-weight: 700;
-  color: #334155;
+  color: #0e4750;
   text-align: center;
 }
 
 .ipd__table td {
-  padding: 10px 7px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 11px;
+  padding: 11px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
   text-align: center;
-  color: #0f172a;
+  color: #102a43;
   vertical-align: middle;
+}
+
+.ipd__table tbody tr:nth-child(even) {
+  background: rgba(248, 250, 252, 0.7);
 }
 
 .ipd__table tbody tr:last-child td {
@@ -808,16 +802,12 @@
 }
 
 .ipd__item-name {
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .ipd__amount {
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
-}
-
-.ipd__row-alt {
-  background: #f8fafc;
 }
 
 .ipd__empty {
@@ -825,99 +815,100 @@
   color: #64748b !important;
 }
 
+.ipd__totals-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 66mm;
+  gap: 6mm;
+  align-items: start;
+  margin-top: 1mm;
+}
+
+.ipd__side-stack {
+  display: grid;
+  gap: 0;
+}
+
 .ipd__notes {
-  border: 1px solid #dbe2ea;
-  border-radius: 16px;
-  padding: 10px 12px;
-  min-height: 30mm;
+  min-height: 22mm;
+  border: 1px solid #d7dde3;
+  border-radius: 12px;
+  padding: 4mm 5mm;
   background: #fff;
 }
 
-.ipd__notes--muted {
-  background: #f8fafc;
-}
-
 .ipd__notes-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 4px;
+  color: #8b98a7;
+  margin-bottom: 2mm;
 }
 
 .ipd__notes-body {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
-  color: #475569;
+  color: #536273;
   white-space: pre-wrap;
 }
 
-.ipd__summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 72mm;
-  gap: 5mm;
-  align-items: start;
-  margin-bottom: 7mm;
+.ipd__notes-spacer {
+  min-height: 1px;
 }
 
-.ipd__summary-box {
+.ipd__total-card {
+  border: 1px solid rgba(14, 71, 80, 0.22);
+  border-radius: 18px;
+  padding: 5.5mm;
+  min-height: 42mm;
   display: flex;
   flex-direction: column;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
+  justify-content: center;
+  align-items: flex-end;
+  text-align: right;
+  background:
+    radial-gradient(circle at top left, rgba(213, 162, 54, 0.18), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f5fbfb 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 28px rgba(14, 71, 80, 0.08);
+  position: relative;
   overflow: hidden;
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
-.ipd__summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 11px;
-  color: #334155;
+.ipd__total-label {
+  font-size: 12px;
+  color: #536273;
+  font-weight: 700;
 }
 
-.ipd__summary-row:last-child {
-  border-bottom: none;
-}
-
-.ipd__summary-row strong {
-  color: #0f172a;
-}
-
-.ipd__summary-row--grand {
-  background: linear-gradient(180deg, #eff6ff, #dbeafe);
-  color: #1e3a8a;
-}
-
-.ipd__summary-row--grand strong {
-  font-size: 18px;
+.ipd__total-value {
+  margin-top: 3mm;
+  font-size: 28px;
   font-weight: 800;
+  color: #0e4750;
   direction: ltr;
+  letter-spacing: -0.02em;
+}
+
+.ipd__total-meta {
+  margin-top: 3mm;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #536273;
+}
+
+.ipd__total-meta strong {
+  color: #102a43;
 }
 
 .ipd__footer {
   margin-top: auto;
-  padding-top: 6mm;
-  border-top: 1px solid #e2e8f0;
+  padding-top: 4mm;
+  border-top: 1px solid #d8c19b;
   text-align: center;
-}
-
-.ipd__footer-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #334155;
-}
-
-.ipd__footer-subtitle {
-  margin-top: 1.5mm;
-  font-size: 11px;
-  color: #64748b;
+  font-size: 12px;
+  color: #8b98a7;
 }
 
 @media (max-width: 639px) {
@@ -940,17 +931,52 @@
   .invoice-print-sheet {
     border-radius: 18px;
   }
+
+  .ipd {
+    padding: 10mm;
+  }
+
+  .ipd__header,
+  .ipd__totals-row,
+  .ipd__info-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .ipd__header {
+    gap: 5mm;
+    min-height: auto;
+    padding-top: 0;
+  }
+
+  .ipd__invoice-meta {
+    text-align: right;
+  }
+
+  .ipd__header-logo {
+    position: static;
+    transform: none;
+    width: 20mm;
+    margin: 0 auto;
+    order: -1;
+  }
+
+  .ipd__brand-name,
+  .ipd__title {
+    font-size: 24px;
+  }
+
 }
 
 @media print {
   html,
   body {
-    width: 210mm !important;
-    min-width: 210mm !important;
-    height: 297mm !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     background: #fff !important;
     color: #111827 !important;
     direction: rtl !important;
@@ -985,45 +1011,40 @@
 
   .invoice-print-sheet,
   .ipd {
-    width: 210mm !important;
-    max-width: 210mm !important;
-    min-width: 210mm !important;
-    height: 297mm !important;
-    min-height: 297mm !important;
-    max-height: 297mm !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     margin: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
   }
 
   .invoice-print-sheet {
+    padding: 0 !important;
     border-radius: 0 !important;
   }
 
   .ipd {
-    padding: 10mm 11mm 10mm !important;
+    padding: 0 !important;
     background: #fff !important;
   }
 
   .ipd__table-wrap,
   .ipd__notes,
-  .ipd__summary-box {
+  .ipd__total-card {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
     overflow: hidden !important;
   }
 
-  .ipd__row-alt {
-    background: #f8fafc !important;
-    print-color-adjust: exact !important;
-    -webkit-print-color-adjust: exact !important;
-  }
-
-  .ipd__summary-row--grand,
-  .ipd__topbar,
-  .ipd__badge,
-  .ipd__brand-mark {
+  .ipd__table thead tr,
+  .ipd__total-card {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }

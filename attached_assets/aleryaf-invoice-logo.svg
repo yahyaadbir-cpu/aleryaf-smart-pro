@@ -1,0 +1,27 @@
+<svg width="360" height="220" viewBox="0 0 360 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aleryafLeaf" x1="32" y1="42" x2="108" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18854A"/>
+      <stop offset="1" stop-color="#0E5E35"/>
+    </linearGradient>
+    <linearGradient id="aleryafText" x1="70" y1="78" x2="290" y2="182" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10683D"/>
+      <stop offset="1" stop-color="#0E5E35"/>
+    </linearGradient>
+    <linearGradient id="aleryafRibbon" x1="108" y1="148" x2="256" y2="206" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D73C23"/>
+      <stop offset="1" stop-color="#B62614"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <path d="M55.561 66.726C39.306 51.641 31.991 28.865 35.966 10.245C54.14 12.089 72.076 21.64 83.404 37.238C90.416 46.946 94.346 58.359 94.713 69.696C83.17 77.214 68.414 76.676 55.561 66.726Z" fill="url(#aleryafLeaf)"/>
+    <path d="M104.079 73.87C95.603 54.095 97.951 31.253 109.999 13.035C127.926 20.536 142.19 35.565 148.814 53.637C152.84 64.671 153.395 76.329 150.987 86.951C137.481 90.597 120.454 86.554 104.079 73.87Z" fill="url(#aleryafLeaf)"/>
+  </g>
+
+  <path d="M95 108C95 74.863 121.863 48 155 48H263C296.137 48 323 74.863 323 108C323 141.137 296.137 168 263 168H155C121.863 168 95 141.137 95 108Z" fill="white" fill-opacity="0.92"/>
+  <path d="M104 108C104 79.833 126.833 57 155 57H263C291.167 57 314 79.833 314 108C314 136.167 291.167 159 263 159H155C126.833 159 104 136.167 104 108Z" fill="url(#aleryafText)"/>
+  <path d="M118 178.998C140.11 167.143 165.405 161.215 190.883 161.846C215.532 162.456 240.46 169.249 261.525 182.111L242.078 205.181C227.711 196.938 210.228 192.608 191.121 192.128C170.495 191.611 149.979 195.931 132.356 204.939L118 178.998Z" fill="url(#aleryafRibbon)"/>
+  <text x="209" y="122" text-anchor="middle" fill="white" font-size="74" font-weight="800" font-family="'Cairo', 'Tajawal', sans-serif">الارياف</text>
+  <text x="189" y="193" text-anchor="middle" fill="white" font-size="34" font-weight="800" letter-spacing="2" font-family="'Cairo', 'Tajawal', sans-serif">GIDA</text>
+</svg>
