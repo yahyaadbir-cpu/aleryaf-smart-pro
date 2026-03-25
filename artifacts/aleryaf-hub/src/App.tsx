@@ -17,6 +17,7 @@ import { InvoicePrintPage } from "@/pages/invoice-print";
 import { BranchesPage } from "@/pages/branches";
 import { LoginPage } from "@/pages/login";
 import { AdminLogPage } from "@/pages/admin-log";
+import { AdminControlPage } from "@/pages/admin-control";
 import { syncExistingPushSubscription, unregisterPushSubscription } from "@/lib/push-notifications";
 
 const queryClient = new QueryClient({
@@ -86,6 +87,9 @@ function Router() {
       </Route>
       <Route path="/admin-log">
         {() => <AuthGuard><AdminLogPage /></AuthGuard>}
+      </Route>
+      <Route path="/admin-control">
+        {() => <AuthGuard><AdminControlPage /></AuthGuard>}
       </Route>
       <Route component={NotFound} />
     </Switch>

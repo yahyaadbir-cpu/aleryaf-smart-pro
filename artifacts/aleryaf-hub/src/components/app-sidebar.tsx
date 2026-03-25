@@ -10,6 +10,7 @@ import {
   Database,
   Activity,
   LogOut,
+  Terminal,
 } from "lucide-react";
 import {
   Sidebar,
@@ -116,6 +117,21 @@ export function AppSidebar() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location === "/admin-control"} tooltip="مركز الأوامر">
+                      <Link
+                        href="/admin-control"
+                        className={`mx-2 flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-200 ${
+                          location === "/admin-control"
+                            ? "border-r-2 border-primary bg-primary/15 text-primary shadow-sm shadow-primary/10"
+                            : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                        }`}
+                      >
+                        <Terminal className="h-[18px] w-[18px]" />
+                        <span className="text-[14px] font-medium">مركز الأوامر</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/admin-log"} tooltip="سجل النشاط">
                       <Link

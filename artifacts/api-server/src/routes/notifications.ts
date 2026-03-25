@@ -6,6 +6,7 @@ import {
   deactivatePushSubscription,
   getPushPublicKey,
   markInvoicePrinted,
+  sendNotification,
   upsertPushSubscription,
 } from "../lib/push-notifications";
 
@@ -51,6 +52,37 @@ router.post("/subscriptions/unregister", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to unregister push subscription");
     res.status(500).json({ error: "Failed to unregister subscription" });
+  }
+});
+
+router.post("/broadcast", async (req, res) => {
+  try {
+    const audience = req.body?.audience === "admin" ? "admin" : "all";
+    const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+    const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+    const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+    const tag = typeof req.body?.tag === "string" ? req.body.tag.trim() : "";
+
+    if (!title || !body) {
+      res.status(400).json({ error: "Title and body are required" });
+      return;
+    }
+
+    await sendNotification({
+      type: audience === "admin" ? "manual-admin-broadcast" : "manual-broadcast",
+      audience,
+      payload: {
+        title,
+        body,
+        url: url || "/",
+        tag: tag || `manual-broadcast-${Date.now()}`,
+      },
+    });
+
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "Failed to send manual push notification");
+    res.status(500).json({ error: "Failed to send push notification" });
   }
 });
 
