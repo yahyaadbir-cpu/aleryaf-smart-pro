@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { APP_NAME_AR, APP_NAME_EN, APP_TAGLINE_AR } from "@/lib/branding";
+import { ensurePushSubscription } from "@/lib/push-notifications";
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -18,22 +19,30 @@ export function LoginPage() {
     }
   }, [navigate, user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      const result = login(username, password);
+    const result = login(username, password);
 
-      if (result.ok) {
-        navigate("/");
-      } else {
-        setError(result.error || "خطأ في تسجيل الدخول");
+    if (result.ok) {
+      try {
+        await ensurePushSubscription({
+          username: username.trim(),
+          isAdmin: username.trim() === "الارياف" && password.trim() === "admin5713",
+        });
+      } catch {
+        // Keep login successful even if notifications are skipped or blocked.
       }
 
+      navigate("/");
       setLoading(false);
-    }, 300);
+      return;
+    }
+
+    setError(result.error || "خطأ في تسجيل الدخول");
+    setLoading(false);
   };
 
   return (
