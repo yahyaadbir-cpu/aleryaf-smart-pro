@@ -91,7 +91,7 @@ export function InvoicesPage() {
   const setCurrency = (val: string) => { setCurrencyState(val); setPage(1); };
   const setBranchFilter = (val: string) => { setBranchFilterState(val); setPage(1); };
 
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: branches } = useGetBranches();
@@ -125,7 +125,10 @@ export function InvoicesPage() {
         invalidateAll();
         if (user) logActivity(user.username, "إنشاء فاتورة", `رقم الفاتورة: ${createdInvoice?.invoiceNumber ?? ""}`);
         if (createdInvoice?.id) {
-          setLocation(`/invoices/${createdInvoice.id}/print?autoprint=1`);
+          dismiss();
+          window.setTimeout(() => {
+            setLocation(`/invoices/${createdInvoice.id}/print?autoprint=1`);
+          }, 50);
           return;
         }
         setMode("list");

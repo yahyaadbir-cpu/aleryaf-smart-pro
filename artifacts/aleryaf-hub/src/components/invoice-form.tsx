@@ -145,6 +145,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
   );
   const [errors, setErrors] = useState<string[]>([]);
   const [itemSearch, setItemSearch] = useState<Record<string, string>>({});
+  const [useNativeBranchSelect, setUseNativeBranchSelect] = useState(false);
   const previousCurrencyRef = useRef(currency);
 
   const { data: allItems } = useGetItems({});
@@ -227,6 +228,13 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
     setItemSearch((prev) => ({ ...prev, [lineKey]: "" }));
   }, [resolveLinePricing]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const userAgent = window.navigator.userAgent || "";
+    setUseNativeBranchSelect(/iPhone|iPad|iPod/i.test(userAgent));
+  }, []);
 
   useEffect(() => {
     if (previousCurrencyRef.current === currency) return;
@@ -388,18 +396,33 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold">الفرع</label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger className="invoice-input">
-                  <SelectValue placeholder="اختر الفرع" />
-                </SelectTrigger>
-                <SelectContent>
+              {useNativeBranchSelect ? (
+                <select
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  className="invoice-input h-10 w-full appearance-auto px-3 py-2 text-sm"
+                >
+                  <option value="">اختر الفرع</option>
                   {typedBranches.map((branch: BranchOption) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <option key={branch.id} value={branch.id.toString()}>
                       {branch.name}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              ) : (
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger className="invoice-input">
+                    <SelectValue placeholder="اختر الفرع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typedBranches.map((branch: BranchOption) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -526,10 +549,9 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     </div>
 
                     <Input
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
                       value={line.quantityInput}
                       onChange={(e) => updateLine(line.key, "quantityInput", e.target.value)}
                       className="invoice-input min-h-10 text-center text-sm"
@@ -537,11 +559,9 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     />
 
                     <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
                       value={line.unitPriceInput}
                       onChange={(e) => updateLine(line.key, "unitPriceInput", e.target.value)}
                       className="invoice-input min-h-10 text-sm"
@@ -608,10 +628,9 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     <div className="space-y-1.5">
                       <label className="block text-sm font-semibold">الكمية (كغ)</label>
                       <Input
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        type="text"
+                        inputMode="text"
+                        autoComplete="off"
                         value={line.quantityInput}
                         onChange={(e) => updateLine(line.key, "quantityInput", e.target.value)}
                         className="invoice-input text-sm"
@@ -622,11 +641,9 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     <div className="space-y-1.5">
                       <label className="block text-sm font-semibold">السعر</label>
                       <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        inputMode="decimal"
-                        pattern="[0-9]*[.,]?[0-9]*"
+                        type="text"
+                        inputMode="text"
+                        autoComplete="off"
                         value={line.unitPriceInput}
                         onChange={(e) => updateLine(line.key, "unitPriceInput", e.target.value)}
                         className="invoice-input text-sm"

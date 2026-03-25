@@ -29,6 +29,14 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   }, []);
 
   useEffect(() => {
+    document.body.classList.add("invoice-print-mode");
+
+    return () => {
+      document.body.classList.remove("invoice-print-mode");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!invoice) return;
 
     const previousTitle = document.title;
@@ -50,7 +58,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
       }
       window.focus();
       window.print();
-    }, 250);
+    }, 450);
 
     return () => {
       window.clearTimeout(timer);

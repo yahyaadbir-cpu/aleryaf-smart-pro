@@ -338,9 +338,9 @@
 .invoice-line-card {
   border: 1px solid var(--invoice-border-soft);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)),
-    var(--invoice-surface-soft);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0)),
+    var(--invoice-surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
   border-radius: var(--invoice-radius-lg);
 }
 
@@ -526,6 +526,11 @@
 
 .print-only {
   display: none;
+}
+
+.invoice-print-mode .app-toast-viewport,
+.invoice-print-mode .app-toast {
+  display: none !important;
 }
 
 .invoice-preview-overlay {
