@@ -70,6 +70,9 @@ app.use(
         }
       : false,
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: appEnv.GOOGLE_CLIENT_ID
+      ? { policy: "same-origin-allow-popups" }
+      : undefined,
     hsts: isProduction,
   }),
 );
