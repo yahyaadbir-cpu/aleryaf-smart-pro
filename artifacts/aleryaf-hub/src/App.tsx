@@ -17,7 +17,7 @@ import { InvoicePrintPage } from "@/pages/invoice-print";
 import { BranchesPage } from "@/pages/branches";
 import { LoginPage } from "@/pages/login";
 import { AdminLogPage } from "@/pages/admin-log";
-import { ensurePushSubscription, unregisterPushSubscription } from "@/lib/push-notifications";
+import { syncExistingPushSubscription, unregisterPushSubscription } from "@/lib/push-notifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,7 +43,7 @@ function NotificationManager() {
 
   React.useEffect(() => {
     if (user) {
-      ensurePushSubscription(user).catch(() => undefined);
+      syncExistingPushSubscription(user).catch(() => undefined);
       return;
     }
 

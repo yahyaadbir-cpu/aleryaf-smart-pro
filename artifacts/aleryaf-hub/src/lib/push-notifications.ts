@@ -58,6 +58,37 @@ export async function getPushStatus(): Promise<PushStatus> {
   return Notification.permission === "granted" ? "disabled" : "disabled";
 }
 
+export async function syncExistingPushSubscription(user: AuthUser) {
+  if (
+    typeof window === "undefined" ||
+    !window.isSecureContext ||
+    !("Notification" in window) ||
+    !("serviceWorker" in navigator) ||
+    Notification.permission !== "granted"
+  ) {
+    return false;
+  }
+
+  const registration = await registerPushServiceWorker();
+  if (!registration) return false;
+
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return false;
+
+  const response = await fetch(`${BASE}/api/notifications/subscriptions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      subscription,
+      username: user.username,
+      isAdmin: user.isAdmin,
+      userAgent: navigator.userAgent,
+    }),
+  });
+
+  return response.ok;
+}
+
 async function getPushPublicKey() {
   const response = await fetch(`${BASE}/api/notifications/public-key`);
   if (!response.ok) {
@@ -74,18 +105,24 @@ export async function ensurePushSubscription(user: AuthUser) {
     !("Notification" in window) ||
     !("serviceWorker" in navigator)
   ) {
-    return;
+    throw new Error("unsupported");
   }
 
   const registration = await registerPushServiceWorker();
-  if (!registration) return;
+  if (!registration) {
+    throw new Error("service-worker-registration-failed");
+  }
 
   if (Notification.permission === "default") {
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
+    if (permission !== "granted") {
+      throw new Error(permission === "denied" ? "permission-denied" : "permission-dismissed");
+    }
   }
 
-  if (Notification.permission !== "granted") return;
+  if (Notification.permission !== "granted") {
+    throw new Error("permission-not-granted");
+  }
 
   const existingSubscription = await registration.pushManager.getSubscription();
   const publicKey = await getPushPublicKey();
@@ -96,7 +133,7 @@ export async function ensurePushSubscription(user: AuthUser) {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     }));
 
-  await fetch(`${BASE}/api/notifications/subscriptions`, {
+  const response = await fetch(`${BASE}/api/notifications/subscriptions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -106,6 +143,12 @@ export async function ensurePushSubscription(user: AuthUser) {
       userAgent: navigator.userAgent,
     }),
   });
+
+  if (!response.ok) {
+    throw new Error("subscription-save-failed");
+  }
+
+  return subscription;
 }
 
 export async function unregisterPushSubscription() {

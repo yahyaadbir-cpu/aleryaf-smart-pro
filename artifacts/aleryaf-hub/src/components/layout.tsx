@@ -12,11 +12,8 @@ import {
   BarChart3,
   UserCircle,
   LogOut,
-  Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/auth";
-import { Button } from "@/components/ui/button";
-import { ensurePushSubscription, getPushStatus, type PushStatus } from "@/lib/push-notifications";
 
 interface LayoutProps {
   children: ReactNode;
@@ -34,8 +31,6 @@ export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pushStatus, setPushStatus] = useState<PushStatus>("unsupported");
-  const [isEnablingPush, setIsEnablingPush] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,47 +43,10 @@ export function Layout({ children }: LayoutProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [menuOpen]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!user) {
-      setPushStatus("unsupported");
-      return;
-    }
-
-    getPushStatus()
-      .then((status) => {
-        if (!cancelled) setPushStatus(status);
-      })
-      .catch(() => {
-        if (!cancelled) setPushStatus("unsupported");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "4rem",
   } as React.CSSProperties;
-
-  const showEnablePushBanner = !!user && pushStatus === "disabled";
-
-  const handleEnablePush = async () => {
-    if (!user || isEnablingPush) return;
-
-    setIsEnablingPush(true);
-    try {
-      await ensurePushSubscription(user);
-      setPushStatus(await getPushStatus());
-    } catch {
-      setPushStatus("disabled");
-    } finally {
-      setIsEnablingPush(false);
-    }
-  };
 
   return (
     <div className="app-shell dark min-h-screen bg-background font-sans text-foreground">
@@ -136,28 +94,6 @@ export function Layout({ children }: LayoutProps) {
             </header>
             <main className="app-main relative flex-1 overflow-auto p-3 pb-20 sm:p-4 md:p-6 md:pb-8 lg:p-8">
               <div className="pointer-events-none absolute top-0 left-1/4 -z-10 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-              {showEnablePushBanner && (
-                <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/8 p-4 backdrop-blur-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-primary">
-                        <Bell className="h-4 w-4" />
-                        <span className="text-sm font-bold">تفعيل الإشعارات</span>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        فعّل الإشعارات لتصلك تنبيهات المبيعات، الأرباح، نفاد المخزون، والتنبيهات الإدارية المهمة.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={handleEnablePush}
-                      disabled={isEnablingPush}
-                      className="shrink-0 bg-primary text-white hover:bg-primary/90"
-                    >
-                      {isEnablingPush ? "جارٍ التفعيل..." : "تفعيل الإشعارات"}
-                    </Button>
-                  </div>
-                </div>
-              )}
               {children}
             </main>
           </div>
