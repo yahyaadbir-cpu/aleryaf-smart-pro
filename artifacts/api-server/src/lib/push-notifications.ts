@@ -15,6 +15,8 @@ type NotificationPayload = {
   body: string;
   url?: string;
   tag?: string;
+  icon?: string;
+  image?: string;
 };
 
 type PushSubscriptionInput = {
@@ -161,7 +163,10 @@ export async function sendNotificationOnce(params: {
     createdAt: new Date(),
   });
 
-  await sendPayloadToAudience(params.audience, params.payload);
+  await sendPayloadToAudience(params.audience, {
+    icon: "/pwa-512.png",
+    ...params.payload,
+  });
   return true;
 }
 
@@ -180,7 +185,10 @@ export async function sendNotification(params: {
     createdAt: new Date(),
   });
 
-  await sendPayloadToAudience(params.audience, params.payload);
+  await sendPayloadToAudience(params.audience, {
+    icon: "/pwa-512.png",
+    ...params.payload,
+  });
 }
 
 export async function markInvoicePrinted(invoiceId: number, printedBy?: string | null) {

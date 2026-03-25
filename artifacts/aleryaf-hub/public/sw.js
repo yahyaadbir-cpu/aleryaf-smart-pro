@@ -1,11 +1,16 @@
 self.addEventListener("push", (event) => {
   const payload = event.data ? event.data.json() : {};
-  const title = payload.title || "ALERYAF HUB";
+  const title = payload.title || "ALERYAF";
   const options = {
     body: payload.body || "",
-    icon: "/pwa-192.png",
+    icon: payload.icon || "/pwa-512.png",
     badge: "/pwa-192.png",
+    image: payload.image || undefined,
     tag: payload.tag || "aleryaf-notification",
+    dir: "rtl",
+    lang: "ar",
+    requireInteraction: false,
+    renotify: false,
     data: {
       url: payload.url || "/",
     },
