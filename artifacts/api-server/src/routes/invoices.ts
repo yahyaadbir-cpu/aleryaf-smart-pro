@@ -84,15 +84,16 @@ function calculateInvoiceLineTotals(
   const unitCost = toSafeNumber(item.unitCost);
 
   if (invoiceType === "purchase") {
-    const totalPrice = quantity * unitPrice;
-    const totalCost = quantity * unitCost;
+    const purchasePricePerKg = toSalePricePerKg(unitPrice);
+    const totalPrice = quantity * purchasePricePerKg;
+    const totalCost = totalPrice;
     return {
       quantity,
       unitPrice,
-      unitCost,
+      unitCost: purchasePricePerKg,
       totalPrice,
       totalCost,
-      profit: totalPrice - totalCost,
+      profit: 0,
     };
   }
 
@@ -307,6 +308,11 @@ router.post("/", async (req, res) => {
       return;
     }
 
+    if (body.invoiceType === "sale" && !body.branchId) {
+      res.status(400).json({ error: "Branch is required" });
+      return;
+    }
+
     for (const item of body.items) {
       if (item.quantity <= 0) {
         res.status(400).json({ error: "Quantity must be greater than 0" });
@@ -328,7 +334,7 @@ router.post("/", async (req, res) => {
         createdBy: body.createdBy,
         invoiceType: body.invoiceType,
         purchaseType: body.invoiceType === "purchase" ? body.purchaseType ?? null : null,
-        branchId: body.branchId,
+        branchId: body.invoiceType === "purchase" && body.purchaseType === "import" ? null : body.branchId ?? null,
         currency: body.currency,
         invoiceDate: body.invoiceDate,
         customerName: body.customerName,
@@ -467,6 +473,11 @@ router.put("/:id", async (req, res) => {
       return;
     }
 
+    if (body.invoiceType === "sale" && !body.branchId) {
+      res.status(400).json({ error: "Branch is required" });
+      return;
+    }
+
     for (const item of body.items) {
       if (item.quantity <= 0) {
         res.status(400).json({ error: "Quantity must be greater than 0" });
@@ -494,7 +505,7 @@ router.put("/:id", async (req, res) => {
         invoiceNumber: body.invoiceNumber,
         invoiceType: body.invoiceType,
         purchaseType: body.invoiceType === "purchase" ? body.purchaseType ?? null : null,
-        branchId: body.branchId,
+        branchId: body.invoiceType === "purchase" && body.purchaseType === "import" ? null : body.branchId ?? null,
         currency: body.currency,
         invoiceDate: body.invoiceDate,
         customerName: body.customerName,

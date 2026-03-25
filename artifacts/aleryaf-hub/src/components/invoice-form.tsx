@@ -76,7 +76,7 @@ interface InvoiceFormProps {
     createdBy?: string;
     invoiceType: InvoiceKind;
     purchaseType?: PurchaseType;
-    branchId: number;
+    branchId: number | null;
     currency: "TRY" | "USD";
     invoiceDate: string;
     customerName?: string;
@@ -160,14 +160,10 @@ function inferPurchaseBranchId(branches: BranchOption[], purchaseType?: Purchase
   }
 
   if (purchaseType === "local_turkey") {
-    return String(findByIncludes(["مرسين", "mersin", "اسطنبول", "إسطنبول", "istanbul", "ترك"])?.id ?? branches[0].id);
+    return String(findByIncludes(["مرسين", "mersin"])?.id ?? branches[0].id);
   }
 
-  return String(findByIncludes(["مرسين", "mersin", "اسطنبول", "إسطنبول", "istanbul"])?.id ?? branches[0].id);
-}
-
-function inferPurchaseCurrency(purchaseType?: PurchaseType | ""): "TRY" | "USD" {
-  return purchaseType === "local_turkey" ? "TRY" : "USD";
+  return "";
 }
 
 function getFormLabels(invoiceType: InvoiceKind) {
@@ -180,8 +176,8 @@ function getFormLabels(invoiceType: InvoiceKind) {
       lineTitle: "بنود الشراء",
       lineHint: "الصنف · الكمية · السعر",
       item: "الصنف",
-      quantity: "الكمية",
-      price: "السعر",
+      quantity: "الكمية (كغ)",
+      price: "سعر الشراء/طن",
       total: "الإجمالي",
       totalCard: "إجمالي الشراء",
       save: "حفظ فاتورة الشراء",
@@ -279,12 +275,11 @@ export function InvoiceForm({ invoiceType, initialData, isEdit, isSaving, onSave
       0;
 
     const saleUnitPrice = (isUsd ? item?.unitPriceUsd : item?.unitPriceTry) ?? 0;
-    const purchaseUnitPrice = unitCost;
 
     return {
       item,
       unitCost,
-      unitPriceInput: String(effectiveInvoiceType === "purchase" ? purchaseUnitPrice : saleUnitPrice || ""),
+      unitPriceInput: effectiveInvoiceType === "purchase" ? "" : String(saleUnitPrice || ""),
     };
   }, [currency, effectiveInvoiceType, typedInventoryItems, typedItems]);
 
@@ -323,6 +318,12 @@ export function InvoiceForm({ invoiceType, initialData, isEdit, isSaving, onSave
       prev.map((line) => {
         if (!line.itemId) return line;
         const { unitCost, unitPriceInput } = resolveLinePricing(line.itemId);
+        if (effectiveInvoiceType === "purchase") {
+          return {
+            ...line,
+            unitCost,
+          };
+        }
         return {
           ...line,
           unitCost,
@@ -330,7 +331,7 @@ export function InvoiceForm({ invoiceType, initialData, isEdit, isSaving, onSave
         };
       }),
     );
-  }, [currency, resolveLinePricing]);
+  }, [currency, effectiveInvoiceType, resolveLinePricing]);
 
   useEffect(() => {
     if (isEdit || initialData?.branchId || branchId || !typedBranches.length) return;
@@ -393,11 +394,17 @@ export function InvoiceForm({ invoiceType, initialData, isEdit, isSaving, onSave
           }, 0) + 1,
         ).padStart(4, "0")}`;
 
+    const resolvedBranchId = effectiveInvoiceType === "purchase"
+      ? purchaseType === "import"
+        ? null
+        : parseInt(branchId || inferPurchaseBranchId(typedBranches, purchaseType), 10)
+      : parseInt(branchId, 10);
+
     onSave({
       invoiceNumber: generatedInvoiceNumber,
       invoiceType: effectiveInvoiceType,
       purchaseType: effectiveInvoiceType === "purchase" ? purchaseType || undefined : undefined,
-      branchId: parseInt(branchId || inferPurchaseBranchId(typedBranches, purchaseType), 10),
+      branchId: Number.isNaN(resolvedBranchId as number) ? null : resolvedBranchId,
       currency: effectiveInvoiceType === "purchase" ? "USD" : currency,
       invoiceDate,
       customerName: customerName.trim(),

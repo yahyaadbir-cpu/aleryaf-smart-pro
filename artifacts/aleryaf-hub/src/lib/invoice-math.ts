@@ -28,17 +28,19 @@ export function getInvoiceLineTotals(line: {
   const rawUnitCost = toSafeNumber(line.unitCost);
 
   if (invoiceType === "purchase") {
-    const revenue = quantityKg * rawUnitPrice;
-    const totalCost = quantityKg * rawUnitCost;
+    const purchasePricePerTon = rawUnitPrice;
+    const purchasePricePerKg = getSalePricePerKg(purchasePricePerTon);
+    const revenue = quantityKg * purchasePricePerKg;
+    const totalCost = revenue;
 
     return {
       quantityKg,
-      salePricePerTon: rawUnitPrice,
-      salePricePerKg: rawUnitPrice,
-      costPerKg: rawUnitCost,
+      salePricePerTon: purchasePricePerTon,
+      salePricePerKg: purchasePricePerKg,
+      costPerKg: purchasePricePerKg,
       revenue,
       totalCost,
-      profit: revenue - totalCost,
+      profit: 0,
     };
   }
 

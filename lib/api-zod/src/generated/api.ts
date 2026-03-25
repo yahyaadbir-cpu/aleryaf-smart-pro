@@ -195,7 +195,7 @@ export const GetInvoicesResponse = zod.object({
       purchaseType: zod
         .enum(["local_syria", "local_turkey", "import"])
         .optional(),
-      branchId: zod.number(),
+      branchId: zod.number().nullable().optional(),
       branchName: zod.string().optional(),
       currency: zod.enum(["TRY", "USD"]),
       totalAmount: zod.number(),
@@ -237,7 +237,7 @@ export const CreateInvoiceBody = zod.object({
   purchaseType: zod
     .enum(["local_syria", "local_turkey", "import"])
     .optional(),
-  branchId: zod.number(),
+  branchId: zod.number().nullable().optional(),
   currency: zod.enum(["TRY", "USD"]),
   invoiceDate: zod.string(),
   customerName: zod.string().optional(),
@@ -268,7 +268,7 @@ export const GetInvoiceResponse = zod.object({
   purchaseType: zod
     .enum(["local_syria", "local_turkey", "import"])
     .optional(),
-  branchId: zod.number(),
+  branchId: zod.number().nullable().optional(),
   branchName: zod.string().optional(),
   currency: zod.enum(["TRY", "USD"]),
   totalAmount: zod.number(),
@@ -308,7 +308,7 @@ export const UpdateInvoiceBody = zod.object({
   purchaseType: zod
     .enum(["local_syria", "local_turkey", "import"])
     .optional(),
-  branchId: zod.number(),
+  branchId: zod.number().nullable().optional(),
   currency: zod.enum(["TRY", "USD"]),
   invoiceDate: zod.string(),
   customerName: zod.string().optional(),
@@ -332,7 +332,7 @@ export const UpdateInvoiceResponse = zod.object({
   purchaseType: zod
     .enum(["local_syria", "local_turkey", "import"])
     .optional(),
-  branchId: zod.number(),
+  branchId: zod.number().nullable().optional(),
   branchName: zod.string().optional(),
   currency: zod.enum(["TRY", "USD"]),
   totalAmount: zod.number(),
