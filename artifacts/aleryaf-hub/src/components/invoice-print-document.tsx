@@ -45,25 +45,57 @@ function translateKnownValue(value: string | undefined, map: Record<string, stri
   return map[normalized] ?? normalized;
 }
 
+function getArabicPurchaseTypeLabel(value?: string) {
+  switch (value) {
+    case "local_syria":
+      return "محلي سوريا";
+    case "local_turkey":
+      return "محلي تركيا";
+    case "import":
+      return "استيراد";
+    default:
+      return "-";
+  }
+}
+
+function getTurkishPurchaseTypeLabel(value?: string) {
+  switch (value) {
+    case "local_syria":
+      return "Suriye Yerel";
+    case "local_turkey":
+      return "Türkiye Yerel";
+    case "import":
+      return "İthalat";
+    default:
+      return "-";
+  }
+}
+
 const COPY = {
   ar: {
     dir: "rtl" as const,
     articleClass: "ipd ipd--print-doc",
     companyName: APP_NAME_AR,
-    brandTag: "فاتورة مبيعات",
-    title: "فاتورة",
+    saleBrandTag: "فاتورة مبيعات",
+    purchaseBrandTag: "فاتورة شراء",
+    saleTitle: "فاتورة مبيعات",
+    purchaseTitle: "فاتورة شراء",
     eyebrow: "ALERYAF TRADING COMPANY",
-    customer: "العميل / الزبون",
+    saleCustomer: "العميل / الزبون",
+    purchaseCustomer: "المورد / الجهة",
     branch: "الفرع",
+    purchaseType: "نوع الشراء",
     currency: "العملة",
     invoiceNumber: "رقم الفاتورة",
     item: "الصنف",
     count: "عدد",
-    quantity: "الكمية (كغ)",
-    tonPrice: "سعر الطن",
+    quantity: "الكمية",
+    salePrice: "سعر الطن",
+    purchasePrice: "السعر",
     total: "الإجمالي",
     notes: "ملاحظات",
-    grandTotal: "الإجمالي الكلي",
+    saleGrandTotal: "إجمالي المبيعات",
+    purchaseGrandTotal: "إجمالي الشراء",
     totalQuantity: "إجمالي الكمية",
     date: "التاريخ",
     thanks: "شكراً لتعاملكم معنا",
@@ -73,20 +105,26 @@ const COPY = {
     dir: "ltr" as const,
     articleClass: "ipd ipd--print-doc ipd--ltr",
     companyName: "Aleryaf Ticaret Şirketi",
-    brandTag: "Satış Faturası",
-    title: "Fatura",
+    saleBrandTag: "Satış Faturası",
+    purchaseBrandTag: "Alış Faturası",
+    saleTitle: "Satış Faturası",
+    purchaseTitle: "Alış Faturası",
     eyebrow: "ALERYAF TRADING COMPANY",
-    customer: "Müşteri",
+    saleCustomer: "Müşteri",
+    purchaseCustomer: "Tedarikçi",
     branch: "Şube",
+    purchaseType: "Alış Türü",
     currency: "Para Birimi",
     invoiceNumber: "Fatura No",
     item: "Ürün",
     count: "Adet",
-    quantity: "Miktar (kg)",
-    tonPrice: "Ton Fiyatı",
+    quantity: "Miktar",
+    salePrice: "Ton Fiyatı",
+    purchasePrice: "Birim Fiyat",
     total: "Toplam",
     notes: "Notlar",
-    grandTotal: "Genel Toplam",
+    saleGrandTotal: "Toplam Satış",
+    purchaseGrandTotal: "Toplam Alış",
     totalQuantity: "Toplam Miktar",
     date: "Tarih",
     thanks: "Teşekkür ederiz",
@@ -102,9 +140,16 @@ export function InvoicePrintDocument({
   language?: InvoicePrintLanguage;
 }) {
   const prepared = preparePrintInvoice(invoice);
-  const totalQuantityKg = prepared.lines.reduce((sum, item) => sum + item.quantityKg, 0);
+  const totalQuantity = prepared.lines.reduce((sum, item) => sum + item.quantityKg, 0);
   const copy = COPY[language];
+  const isPurchase = prepared.invoiceType === "purchase";
   const branchName = language === "tr" ? translateKnownValue(invoice.branchName, TURKISH_BRANCH_NAMES) : invoice.branchName || "-";
+  const customerLabel = isPurchase ? copy.purchaseCustomer : copy.saleCustomer;
+  const priceLabel = isPurchase ? copy.purchasePrice : copy.salePrice;
+  const totalLabel = isPurchase ? copy.purchaseGrandTotal : copy.saleGrandTotal;
+  const purchaseTypeLabel = language === "tr"
+    ? getTurkishPurchaseTypeLabel(prepared.purchaseType)
+    : getArabicPurchaseTypeLabel(prepared.purchaseType);
 
   return (
     <article className={copy.articleClass} dir={copy.dir}>
@@ -115,12 +160,12 @@ export function InvoicePrintDocument({
 
         <div className="ipd__brand">
           <div className="ipd__brand-name">{copy.companyName}</div>
-          <div className="ipd__brand-tag">{copy.brandTag}</div>
+          <div className="ipd__brand-tag">{isPurchase ? copy.purchaseBrandTag : copy.saleBrandTag}</div>
         </div>
 
         <div className="ipd__invoice-meta">
           <div className="ipd__eyebrow">{copy.eyebrow}</div>
-          <h1 className="ipd__title">{copy.title}</h1>
+          <h1 className="ipd__title">{isPurchase ? copy.purchaseTitle : copy.saleTitle}</h1>
           <div className="ipd__meta-line">
             {copy.invoiceNumber}: {invoice.invoiceNumber}
           </div>
@@ -132,7 +177,7 @@ export function InvoicePrintDocument({
 
       <section className="ipd__info-grid">
         <div className="ipd__info-box">
-          <div className="ipd__info-label">{copy.customer}</div>
+          <div className="ipd__info-label">{customerLabel}</div>
           <div className="ipd__info-value">{invoice.customerName || "-"}</div>
         </div>
         <div className="ipd__info-box">
@@ -147,6 +192,12 @@ export function InvoicePrintDocument({
           <div className="ipd__info-label">{copy.invoiceNumber}</div>
           <div className="ipd__info-value">{invoice.invoiceNumber}</div>
         </div>
+        {isPurchase ? (
+          <div className="ipd__info-box">
+            <div className="ipd__info-label">{copy.purchaseType}</div>
+            <div className="ipd__info-value">{purchaseTypeLabel}</div>
+          </div>
+        ) : null}
       </section>
 
       <section className="ipd__table-wrap">
@@ -159,7 +210,7 @@ export function InvoicePrintDocument({
               </th>
               {prepared.hasCountColumn ? <th style={{ width: "12%" }}>{copy.count}</th> : null}
               <th style={{ width: "17%" }}>{copy.quantity}</th>
-              <th style={{ width: "17%" }}>{copy.tonPrice}</th>
+              <th style={{ width: "17%" }}>{priceLabel}</th>
               <th style={{ width: "18%" }}>{copy.total}</th>
             </tr>
           </thead>
@@ -169,6 +220,7 @@ export function InvoicePrintDocument({
                 const itemName = item.itemName || item.rawName || "-";
                 const translatedItemName =
                   language === "tr" ? translateKnownValue(itemName, TURKISH_ITEM_NAMES) : itemName;
+                const displayedUnitPrice = isPurchase ? item.salePricePerKg : item.salePricePerKg * 1000;
 
                 return (
                   <tr key={`${item.itemName || item.rawName || "line"}-${index}`}>
@@ -178,7 +230,7 @@ export function InvoicePrintDocument({
                       <td>{item.count == null || String(item.count).trim() === "" ? "-" : item.count}</td>
                     ) : null}
                     <td>{formatNumberByLanguage(item.quantityKg, language)}</td>
-                    <td>{formatCurrencyByLanguage(item.salePricePerKg * 1000, prepared.currency, language)}</td>
+                    <td>{formatCurrencyByLanguage(displayedUnitPrice, prepared.currency, language)}</td>
                     <td className="ipd__amount">{formatCurrencyByLanguage(item.revenue, prepared.currency, language)}</td>
                   </tr>
                 );
@@ -207,11 +259,11 @@ export function InvoicePrintDocument({
         </div>
 
         <div className="ipd__total-card">
-          <div className="ipd__total-label">{copy.grandTotal}</div>
+          <div className="ipd__total-label">{totalLabel}</div>
           <div className="ipd__total-value">{formatCurrencyByLanguage(prepared.revenue, prepared.currency, language)}</div>
           <div className="ipd__total-meta">
             <span>{copy.totalQuantity}</span>
-            <strong>{formatNumberByLanguage(totalQuantityKg, language)} kg</strong>
+            <strong>{formatNumberByLanguage(totalQuantity, language)}</strong>
           </div>
         </div>
       </section>

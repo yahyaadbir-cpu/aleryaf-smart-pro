@@ -11,6 +11,7 @@ export function buildInvoiceFilters(
     dateTo?: string;
     branchId?: number;
     currency?: "TRY" | "USD";
+    invoiceType?: "sale" | "purchase";
   },
 ) {
   let conditions = sql`1=1`;
@@ -18,6 +19,7 @@ export function buildInvoiceFilters(
   if (query.dateTo) conditions = sql`${conditions} AND ${invoices.invoiceDate} <= ${query.dateTo}`;
   if (query.branchId) conditions = sql`${conditions} AND ${invoices.branchId} = ${query.branchId}`;
   if (query.currency) conditions = sql`${conditions} AND ${invoices.currency} = ${query.currency}`;
+  if (query.invoiceType) conditions = sql`${conditions} AND ${invoices.invoiceType} = ${query.invoiceType}`;
   return conditions;
 }
 

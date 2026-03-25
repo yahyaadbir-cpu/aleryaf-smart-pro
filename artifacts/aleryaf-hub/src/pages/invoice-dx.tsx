@@ -106,7 +106,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
   }, [branches, dxState?.branchId, invoice?.branchName]);
 
   const summary = useMemo(() => {
-    return summarizeInvoiceLines(dxState?.items || []);
+    return summarizeInvoiceLines(dxState?.items || [], "sale");
   }, [dxState?.items]);
 
   const updateHeader = <K extends keyof DxInvoiceState>(field: K, value: DxInvoiceState[K]) => {
@@ -153,6 +153,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
         invoiceDate: dxState.invoiceDate,
         branchName,
         currency: dxState.currency,
+        invoiceType: "sale",
         customerName: dxState.customerName,
         notes: dxState.notes,
         totalAmount: summary.revenue,
@@ -205,6 +206,20 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
       <Layout>
         <div className="flex items-center justify-center py-20">
           <p className="text-muted-foreground">الفاتورة غير موجودة</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (invoice.invoiceType === "purchase") {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <p className="text-lg font-bold text-foreground">فاتورة الشراء لا تدعم DX</p>
+          <p className="max-w-md text-sm text-muted-foreground">يمكنك طباعة فاتورة الشراء من صفحة الفواتير مباشرة، لكن وضع DX مخصص لفواتير البيع فقط.</p>
+          <Button onClick={() => setLocation("/invoices")} className="bg-primary text-white">
+            العودة إلى الفواتير
+          </Button>
         </div>
       </Layout>
     );

@@ -179,6 +179,7 @@ export const GetInvoicesQueryParams = zod.object({
   limit: zod.coerce.number().optional(),
   branchId: zod.coerce.number().optional(),
   currency: zod.enum(["TRY", "USD"]).optional(),
+  invoiceType: zod.enum(["sale", "purchase"]).optional(),
   dateFrom: zod.coerce.string().optional(),
   dateTo: zod.coerce.string().optional(),
   search: zod.coerce.string().optional(),
@@ -190,6 +191,10 @@ export const GetInvoicesResponse = zod.object({
       id: zod.number(),
       invoiceNumber: zod.string(),
       createdBy: zod.string().optional(),
+      invoiceType: zod.enum(["sale", "purchase"]),
+      purchaseType: zod
+        .enum(["local_syria", "local_turkey", "import"])
+        .optional(),
       branchId: zod.number(),
       branchName: zod.string().optional(),
       currency: zod.enum(["TRY", "USD"]),
@@ -228,6 +233,10 @@ export const GetInvoicesResponse = zod.object({
 export const CreateInvoiceBody = zod.object({
   invoiceNumber: zod.string(),
   createdBy: zod.string(),
+  invoiceType: zod.enum(["sale", "purchase"]),
+  purchaseType: zod
+    .enum(["local_syria", "local_turkey", "import"])
+    .optional(),
   branchId: zod.number(),
   currency: zod.enum(["TRY", "USD"]),
   invoiceDate: zod.string(),
@@ -255,6 +264,10 @@ export const GetInvoiceResponse = zod.object({
   id: zod.number(),
   invoiceNumber: zod.string(),
   createdBy: zod.string().optional(),
+  invoiceType: zod.enum(["sale", "purchase"]),
+  purchaseType: zod
+    .enum(["local_syria", "local_turkey", "import"])
+    .optional(),
   branchId: zod.number(),
   branchName: zod.string().optional(),
   currency: zod.enum(["TRY", "USD"]),
@@ -291,6 +304,10 @@ export const UpdateInvoiceParams = zod.object({
 
 export const UpdateInvoiceBody = zod.object({
   invoiceNumber: zod.string(),
+  invoiceType: zod.enum(["sale", "purchase"]),
+  purchaseType: zod
+    .enum(["local_syria", "local_turkey", "import"])
+    .optional(),
   branchId: zod.number(),
   currency: zod.enum(["TRY", "USD"]),
   invoiceDate: zod.string(),
@@ -311,6 +328,10 @@ export const UpdateInvoiceResponse = zod.object({
   id: zod.number(),
   invoiceNumber: zod.string(),
   createdBy: zod.string().optional(),
+  invoiceType: zod.enum(["sale", "purchase"]),
+  purchaseType: zod
+    .enum(["local_syria", "local_turkey", "import"])
+    .optional(),
   branchId: zod.number(),
   branchName: zod.string().optional(),
   currency: zod.enum(["TRY", "USD"]),

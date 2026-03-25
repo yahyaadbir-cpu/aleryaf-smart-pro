@@ -90,6 +90,21 @@ export const InvoiceCurrency = {
   USD: "USD",
 } as const;
 
+export type InvoiceType = (typeof InvoiceType)[keyof typeof InvoiceType];
+
+export const InvoiceType = {
+  sale: "sale",
+  purchase: "purchase",
+} as const;
+
+export type PurchaseType = (typeof PurchaseType)[keyof typeof PurchaseType];
+
+export const PurchaseType = {
+  local_syria: "local_syria",
+  local_turkey: "local_turkey",
+  import: "import",
+} as const;
+
 export interface InvoiceItem {
   id: number;
   itemId?: number;
@@ -106,6 +121,8 @@ export interface Invoice {
   id: number;
   invoiceNumber: string;
   createdBy?: string;
+  invoiceType: InvoiceType;
+  purchaseType?: PurchaseType;
   branchId: number;
   branchName?: string;
   currency: InvoiceCurrency;
@@ -138,6 +155,8 @@ export interface CreateInvoiceItemInput {
 export interface CreateInvoiceInput {
   invoiceNumber: string;
   createdBy: string;
+  invoiceType: InvoiceType;
+  purchaseType?: PurchaseType;
   branchId: number;
   currency: CreateInvoiceInputCurrency;
   invoiceDate: string;
@@ -156,6 +175,8 @@ export const UpdateInvoiceInputCurrency = {
 
 export interface UpdateInvoiceInput {
   invoiceNumber: string;
+  invoiceType: InvoiceType;
+  purchaseType?: PurchaseType;
   branchId: number;
   currency: UpdateInvoiceInputCurrency;
   invoiceDate: string;
@@ -358,6 +379,7 @@ export type GetInvoicesParams = {
   limit?: number;
   branchId?: number;
   currency?: GetInvoicesCurrency;
+  invoiceType?: InvoiceType;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

@@ -8,6 +8,8 @@ export const invoicesTable = pgTable("invoices", {
   id: serial("id").primaryKey(),
   invoiceNumber: text("invoice_number").notNull(),
   createdBy: text("created_by"),
+  invoiceType: text("invoice_type").notNull().default("sale"),
+  purchaseType: text("purchase_type"),
   branchId: integer("branch_id").notNull().references(() => branchesTable.id),
   currency: text("currency").notNull(), // TRY | USD
   totalAmount: numeric("total_amount", { precision: 15, scale: 4 }).notNull().default("0"),

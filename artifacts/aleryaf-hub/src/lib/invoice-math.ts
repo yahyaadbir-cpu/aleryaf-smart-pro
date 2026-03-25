@@ -1,4 +1,5 @@
 export const TON_IN_KG = 1000;
+export type InvoiceKind = "sale" | "purchase";
 
 function toSafeNumber(value: number | string | null | undefined) {
   if (typeof value === "number") {
@@ -21,10 +22,28 @@ export function getInvoiceLineTotals(line: {
   quantity: number | string | null | undefined;
   unitPrice: number | string | null | undefined;
   unitCost: number | string | null | undefined;
-}) {
+}, invoiceType: InvoiceKind = "sale") {
   const quantityKg = toSafeNumber(line.quantity);
-  const salePricePerTon = toSafeNumber(line.unitPrice);
-  const costPerKg = toSafeNumber(line.unitCost);
+  const rawUnitPrice = toSafeNumber(line.unitPrice);
+  const rawUnitCost = toSafeNumber(line.unitCost);
+
+  if (invoiceType === "purchase") {
+    const revenue = quantityKg * rawUnitPrice;
+    const totalCost = quantityKg * rawUnitCost;
+
+    return {
+      quantityKg,
+      salePricePerTon: rawUnitPrice,
+      salePricePerKg: rawUnitPrice,
+      costPerKg: rawUnitCost,
+      revenue,
+      totalCost,
+      profit: revenue - totalCost,
+    };
+  }
+
+  const salePricePerTon = rawUnitPrice;
+  const costPerKg = rawUnitCost;
   const salePricePerKg = getSalePricePerKg(salePricePerTon);
   const revenue = quantityKg * salePricePerKg;
   const totalCost = quantityKg * costPerKg;
@@ -44,12 +63,12 @@ export function summarizeInvoiceLines<T extends {
   quantity: number | string | null | undefined;
   unitPrice: number | string | null | undefined;
   unitCost: number | string | null | undefined;
-}>(lines: T[]) {
+}>(lines: T[], invoiceType: InvoiceKind = "sale") {
   let revenue = 0;
   let totalCost = 0;
 
   const normalizedLines = lines.map((line) => {
-    const totals = getInvoiceLineTotals(line);
+    const totals = getInvoiceLineTotals(line, invoiceType);
     revenue += totals.revenue;
     totalCost += totals.totalCost;
     return {

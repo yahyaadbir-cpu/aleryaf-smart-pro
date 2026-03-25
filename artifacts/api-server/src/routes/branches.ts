@@ -79,7 +79,7 @@ router.delete("/:id", async (req, res) => {
 router.get("/analytics", async (req, res) => {
   try {
     const query = GetBranchAnalyticsQueryParams.parse(req.query);
-    const conditions = buildInvoiceFilters(invoicesTable, query);
+    const conditions = buildInvoiceFilters(invoicesTable, { ...query, invoiceType: "sale" });
 
     const results = await db
       .select({

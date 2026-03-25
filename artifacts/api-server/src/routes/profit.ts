@@ -27,6 +27,7 @@ router.get("/analysis", async (req, res) => {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
       branchId: query.branchId,
+      invoiceType: "sale",
     });
 
     const [totals] = await db.select({
@@ -88,6 +89,7 @@ router.get("/by-item", async (req, res) => {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
       branchId: query.branchId,
+      invoiceType: "sale",
     });
 
     const results = await db.select({

@@ -21,6 +21,16 @@ import {
 
 const router: IRouter = Router();
 
+type InvoiceType = "sale" | "purchase";
+
+type ResolvedInvoiceItem = {
+  itemId: number | null;
+  rawName?: string;
+  quantity: number;
+  unitPrice: number;
+  unitCost: number;
+};
+
 async function resolveItemByName(rawName: string): Promise<number | null> {
   if (!rawName) return null;
   const normalized = normalizeArabicText(rawName);
@@ -45,7 +55,7 @@ async function resolveItemByName(rawName: string): Promise<number | null> {
 
   const [fuzzy] = await db.select({ id: itemsTable.id })
     .from(itemsTable)
-    .where(sql`LOWER(${itemsTable.name}) LIKE ${'%' + normalized + '%'}`)
+    .where(sql`LOWER(${itemsTable.name}) LIKE ${"%" + normalized + "%"}`)
     .limit(1);
   if (fuzzy) return fuzzy.id;
 
@@ -65,51 +75,82 @@ function toSafeNumber(value: number | string | null | undefined) {
   return 0;
 }
 
-function calculateInvoiceLineTotals(item: { quantity: number | string | null | undefined; unitPrice: number | string | null | undefined; unitCost: number | string | null | undefined }) {
-  const quantityKg = toSafeNumber(item.quantity);
-  const salePricePerTon = toSafeNumber(item.unitPrice);
-  const costPerKg = toSafeNumber(item.unitCost);
-  const salePricePerKg = toSalePricePerKg(salePricePerTon);
-  const totalPrice = quantityKg * salePricePerKg;
-  const totalCost = quantityKg * costPerKg;
+function calculateInvoiceLineTotals(
+  item: { quantity: number | string | null | undefined; unitPrice: number | string | null | undefined; unitCost: number | string | null | undefined },
+  invoiceType: InvoiceType,
+) {
+  const quantity = toSafeNumber(item.quantity);
+  const unitPrice = toSafeNumber(item.unitPrice);
+  const unitCost = toSafeNumber(item.unitCost);
+
+  if (invoiceType === "purchase") {
+    const totalPrice = quantity * unitPrice;
+    const totalCost = quantity * unitCost;
+    return {
+      quantity,
+      unitPrice,
+      unitCost,
+      totalPrice,
+      totalCost,
+      profit: totalPrice - totalCost,
+    };
+  }
+
+  const salePricePerKg = toSalePricePerKg(unitPrice);
+  const totalPrice = quantity * salePricePerKg;
+  const totalCost = quantity * unitCost;
 
   return {
-    quantityKg,
-    salePricePerTon,
-    salePricePerKg,
-    costPerKg,
+    quantity,
+    unitPrice,
+    unitCost,
     totalPrice,
     totalCost,
     profit: totalPrice - totalCost,
   };
 }
 
-function processItems(items: Array<{ itemId?: number | null; rawName?: string; quantity: number; unitPrice: number; unitCost: number }>) {
-  let totalAmount = 0;
-  let totalCost = 0;
-  const processed = items.map(item => {
-    const lineTotals = calculateInvoiceLineTotals(item);
-    totalAmount += lineTotals.totalPrice;
-    totalCost += lineTotals.totalCost;
-    return { ...item, totalPrice: lineTotals.totalPrice, totalCost: lineTotals.totalCost };
-  });
-  return { processed, totalAmount, totalCost, totalProfit: totalAmount - totalCost };
-}
-
-function summarizeInvoiceLineItems<T extends { quantity: number | string | null | undefined; unitPrice: number | string | null | undefined; unitCost: number | string | null | undefined }>(items: T[]) {
+function processItems(
+  invoiceType: InvoiceType,
+  items: Array<{ itemId?: number | null; rawName?: string; quantity: number; unitPrice: number; unitCost: number }>,
+) {
   let totalAmount = 0;
   let totalCost = 0;
 
-  const normalizedItems = items.map((item) => {
-    const lineTotals = calculateInvoiceLineTotals(item);
+  const processed = items.map((item) => {
+    const lineTotals = calculateInvoiceLineTotals(item, invoiceType);
     totalAmount += lineTotals.totalPrice;
     totalCost += lineTotals.totalCost;
     return {
       ...item,
-      quantity: lineTotals.quantityKg,
-      unitPrice: lineTotals.salePricePerTon,
-      unitCost: lineTotals.costPerKg,
-      salePricePerKg: lineTotals.salePricePerKg,
+      totalPrice: lineTotals.totalPrice,
+      totalCost: lineTotals.totalCost,
+    };
+  });
+
+  return {
+    processed,
+    totalAmount,
+    totalCost,
+    totalProfit: totalAmount - totalCost,
+  };
+}
+
+function summarizeInvoiceLineItems<
+  T extends { quantity: number | string | null | undefined; unitPrice: number | string | null | undefined; unitCost: number | string | null | undefined }
+>(invoiceType: InvoiceType, items: T[]) {
+  let totalAmount = 0;
+  let totalCost = 0;
+
+  const normalizedItems = items.map((item) => {
+    const lineTotals = calculateInvoiceLineTotals(item, invoiceType);
+    totalAmount += lineTotals.totalPrice;
+    totalCost += lineTotals.totalCost;
+    return {
+      ...item,
+      quantity: lineTotals.quantity,
+      unitPrice: lineTotals.unitPrice,
+      unitCost: lineTotals.unitCost,
       totalPrice: lineTotals.totalPrice,
       totalCost: lineTotals.totalCost,
       lineProfit: lineTotals.profit,
@@ -124,17 +165,10 @@ function summarizeInvoiceLineItems<T extends { quantity: number | string | null 
   };
 }
 
-type ResolvedInvoiceItem = {
-  itemId: number | null;
-  rawName?: string;
-  quantity: number;
-  unitPrice: number;
-  unitCost: number;
-};
-
 async function buildResolvedInvoiceItems(
   items: Array<{ itemId?: number | null; rawName?: string; quantity: number; unitPrice: number; unitCost: number }>,
   currency: "TRY" | "USD",
+  invoiceType: InvoiceType,
   options?: { preserveProvidedCost?: boolean },
 ): Promise<ResolvedInvoiceItem[]> {
   const resolvedItems: ResolvedInvoiceItem[] = [];
@@ -147,16 +181,16 @@ async function buildResolvedInvoiceItems(
     }
 
     let unitCost = item.unitCost;
-    if (resolvedItemId) {
-      if (!options?.preserveProvidedCost) {
-        if (!costCache.has(resolvedItemId)) {
-          costCache.set(
-            resolvedItemId,
-            await getLatestItemCostSnapshot(db, resolvedItemId, currency),
-          );
-        }
-        unitCost = costCache.get(resolvedItemId) ?? unitCost;
+    if (invoiceType === "purchase") {
+      unitCost = item.unitPrice;
+    } else if (resolvedItemId && !options?.preserveProvidedCost) {
+      if (!costCache.has(resolvedItemId)) {
+        costCache.set(
+          resolvedItemId,
+          await getLatestItemCostSnapshot(db, resolvedItemId, currency),
+        );
       }
+      unitCost = costCache.get(resolvedItemId) ?? unitCost;
     }
 
     resolvedItems.push({ ...item, itemId: resolvedItemId, unitCost });
@@ -175,21 +209,24 @@ router.get("/", async (req, res) => {
     let conditions = sql`1=1`;
     if (query.branchId) conditions = sql`${conditions} AND ${invoicesTable.branchId} = ${query.branchId}`;
     if (query.currency) conditions = sql`${conditions} AND ${invoicesTable.currency} = ${query.currency}`;
+    if (query.invoiceType) conditions = sql`${conditions} AND ${invoicesTable.invoiceType} = ${query.invoiceType}`;
     if (query.dateFrom) conditions = sql`${conditions} AND ${invoicesTable.invoiceDate} >= ${query.dateFrom}`;
     if (query.dateTo) conditions = sql`${conditions} AND ${invoicesTable.invoiceDate} <= ${query.dateTo}`;
-    if ((query as any).search) {
-      const s = (query as any).search;
-      conditions = sql`${conditions} AND ${invoicesTable.invoiceNumber} ILIKE ${'%' + s + '%'}`;
+    if (query.search) {
+      conditions = sql`${conditions} AND ${invoicesTable.invoiceNumber} ILIKE ${"%" + query.search + "%"}`;
     }
 
     const [countResult] = await db.select({ count: sql<number>`COUNT(*)` })
-      .from(invoicesTable).where(conditions);
+      .from(invoicesTable)
+      .where(conditions);
 
     const invoices = await db
       .select({
         id: invoicesTable.id,
         invoiceNumber: invoicesTable.invoiceNumber,
         createdBy: invoicesTable.createdBy,
+        invoiceType: invoicesTable.invoiceType,
+        purchaseType: invoicesTable.purchaseType,
         branchId: invoicesTable.branchId,
         branchName: branchesTable.name,
         currency: invoicesTable.currency,
@@ -229,21 +266,23 @@ router.get("/", async (req, res) => {
     }
 
     res.json({
-      data: invoices.map(inv => ({
-        ...inv,
-        ...(() => {
-          const summary = summarizeInvoiceLineItems(itemsByInvoiceId.get(inv.id) ?? []);
-          return {
-            totalAmount: summary.totalAmount,
-            totalCost: summary.totalCost,
-            totalProfit: summary.totalProfit,
-            displayAmount: summary.totalAmount,
-            displayCost: summary.totalCost,
-            displayProfit: summary.totalProfit,
-          };
-        })(),
-        createdAt: toIsoDateTime(inv.createdAt),
-      })),
+      data: invoices.map((invoice) => {
+        const invoiceType = (invoice.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType;
+        const summary = summarizeInvoiceLineItems(invoiceType, itemsByInvoiceId.get(invoice.id) ?? []);
+
+        return {
+          ...invoice,
+          invoiceType,
+          purchaseType: invoice.purchaseType ?? undefined,
+          totalAmount: summary.totalAmount,
+          totalCost: summary.totalCost,
+          totalProfit: summary.totalProfit,
+          displayAmount: summary.totalAmount,
+          displayCost: summary.totalCost,
+          displayProfit: summary.totalProfit,
+          createdAt: toIsoDateTime(invoice.createdAt),
+        };
+      }),
       total: Number(countResult.count),
       page,
       limit,
@@ -262,6 +301,12 @@ router.post("/", async (req, res) => {
       res.status(400).json({ error: "At least one item is required" });
       return;
     }
+
+    if (body.invoiceType === "purchase" && !body.purchaseType) {
+      res.status(400).json({ error: "Purchase type is required" });
+      return;
+    }
+
     for (const item of body.items) {
       if (item.quantity <= 0) {
         res.status(400).json({ error: "Quantity must be greater than 0" });
@@ -273,14 +318,16 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const resolvedItems = await buildResolvedInvoiceItems(body.items, body.currency);
-    const { processed, totalAmount, totalCost, totalProfit } = processItems(resolvedItems);
+    const resolvedItems = await buildResolvedInvoiceItems(body.items, body.currency, body.invoiceType);
+    const { processed, totalAmount, totalCost, totalProfit } = processItems(body.invoiceType, resolvedItems);
     const createdAt = new Date();
 
     const result = await db.transaction(async (tx) => {
       const [insertedInvoice] = await tx.insert(invoicesTable).values({
         invoiceNumber: body.invoiceNumber,
         createdBy: body.createdBy,
+        invoiceType: body.invoiceType,
+        purchaseType: body.invoiceType === "purchase" ? body.purchaseType ?? null : null,
         branchId: body.branchId,
         currency: body.currency,
         invoiceDate: body.invoiceDate,
@@ -295,7 +342,7 @@ router.post("/", async (req, res) => {
 
       if (processed.length > 0) {
         await tx.insert(invoiceItemsTable).values(
-          processed.map(item => ({
+          processed.map((item) => ({
             invoiceId: invoice.id,
             itemId: item.itemId,
             rawName: item.rawName,
@@ -304,18 +351,20 @@ router.post("/", async (req, res) => {
             unitCost: item.unitCost.toString(),
             totalPrice: item.totalPrice.toString(),
             totalCost: item.totalCost.toString(),
-          }))
+          })),
         );
       }
+
       return invoice;
     });
 
     const unmatchedNames = processed
-      .filter(i => !i.itemId && i.rawName)
-      .map(i => i.rawName);
+      .filter((item) => !item.itemId && item.rawName)
+      .map((item) => item.rawName);
 
     res.status(201).json({
       ...result,
+      purchaseType: result.purchaseType ?? undefined,
       totalAmount: parseFloat(result.totalAmount || "0"),
       totalCost: parseFloat(result.totalCost || "0"),
       totalProfit: parseFloat(result.totalProfit || "0"),
@@ -340,6 +389,8 @@ router.get("/:id", async (req, res) => {
         id: invoicesTable.id,
         invoiceNumber: invoicesTable.invoiceNumber,
         createdBy: invoicesTable.createdBy,
+        invoiceType: invoicesTable.invoiceType,
+        purchaseType: invoicesTable.purchaseType,
         branchId: invoicesTable.branchId,
         branchName: branchesTable.name,
         currency: invoicesTable.currency,
@@ -376,10 +427,13 @@ router.get("/:id", async (req, res) => {
       .leftJoin(itemsTable, eq(invoiceItemsTable.itemId, itemsTable.id))
       .where(eq(invoiceItemsTable.invoiceId, id));
 
-    const summarizedItems = summarizeInvoiceLineItems(items);
+    const invoiceType = (invoice.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType;
+    const summarizedItems = summarizeInvoiceLineItems(invoiceType, items);
 
     res.json({
       ...invoice,
+      invoiceType,
+      purchaseType: invoice.purchaseType ?? undefined,
       totalAmount: summarizedItems.totalAmount,
       totalCost: summarizedItems.totalCost,
       totalProfit: summarizedItems.totalProfit,
@@ -387,7 +441,7 @@ router.get("/:id", async (req, res) => {
       displayCost: summarizedItems.totalCost,
       displayProfit: summarizedItems.totalProfit,
       createdAt: toIsoDateTime(invoice.createdAt),
-      items: summarizedItems.items.map(item => ({
+      items: summarizedItems.items.map((item) => ({
         ...item,
         matched: !!item.itemId,
       })),
@@ -407,6 +461,12 @@ router.put("/:id", async (req, res) => {
       res.status(400).json({ error: "At least one item is required" });
       return;
     }
+
+    if (body.invoiceType === "purchase" && !body.purchaseType) {
+      res.status(400).json({ error: "Purchase type is required" });
+      return;
+    }
+
     for (const item of body.items) {
       if (item.quantity <= 0) {
         res.status(400).json({ error: "Quantity must be greater than 0" });
@@ -424,14 +484,16 @@ router.put("/:id", async (req, res) => {
       return;
     }
 
-    const resolvedItems = await buildResolvedInvoiceItems(body.items, body.currency, {
+    const resolvedItems = await buildResolvedInvoiceItems(body.items, body.currency, body.invoiceType, {
       preserveProvidedCost: true,
     });
-    const { processed, totalAmount, totalCost, totalProfit } = processItems(resolvedItems);
+    const { processed, totalAmount, totalCost, totalProfit } = processItems(body.invoiceType, resolvedItems);
 
     const invoice = await db.transaction(async (tx) => {
       const [updated] = await tx.update(invoicesTable).set({
         invoiceNumber: body.invoiceNumber,
+        invoiceType: body.invoiceType,
+        purchaseType: body.invoiceType === "purchase" ? body.purchaseType ?? null : null,
         branchId: body.branchId,
         currency: body.currency,
         invoiceDate: body.invoiceDate,
@@ -446,7 +508,7 @@ router.put("/:id", async (req, res) => {
 
       if (processed.length > 0) {
         await tx.insert(invoiceItemsTable).values(
-          processed.map(item => ({
+          processed.map((item) => ({
             invoiceId: id,
             itemId: item.itemId,
             rawName: item.rawName,
@@ -455,9 +517,10 @@ router.put("/:id", async (req, res) => {
             unitCost: item.unitCost.toString(),
             totalPrice: item.totalPrice.toString(),
             totalCost: item.totalCost.toString(),
-          }))
+          })),
         );
       }
+
       return updated;
     });
 
@@ -466,10 +529,11 @@ router.put("/:id", async (req, res) => {
       return;
     }
 
-    const printedBefore = await hasInvoiceBeenPrinted(id);
+    const printedBefore = existing.invoiceType !== "purchase" ? await hasInvoiceBeenPrinted(id) : false;
 
     res.json({
       ...invoice,
+      purchaseType: invoice.purchaseType ?? undefined,
       totalAmount: parseFloat(invoice.totalAmount || "0"),
       totalCost: parseFloat(invoice.totalCost || "0"),
       totalProfit: parseFloat(invoice.totalProfit || "0"),

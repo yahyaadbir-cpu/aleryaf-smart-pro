@@ -22,6 +22,24 @@ import { getInvoice } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 
 type ViewMode = "list" | "create" | "edit" | "view";
+type InvoiceType = "sale" | "purchase";
+
+function getInvoiceTypeLabel(invoiceType?: string) {
+  return invoiceType === "purchase" ? "شراء" : "بيع";
+}
+
+function getPurchaseTypeLabel(purchaseType?: string) {
+  switch (purchaseType) {
+    case "local_syria":
+      return "محلي سوريا";
+    case "local_turkey":
+      return "محلي تركيا";
+    case "import":
+      return "استيراد";
+    default:
+      return "—";
+  }
+}
 
 function normalizeInvoiceText(value: unknown) {
   return String(value ?? "").trim();
@@ -51,6 +69,12 @@ function buildInvoiceEditDetails(previousInvoice: any, nextInvoice: any, branche
   if (previousInvoice.invoiceDate !== nextInvoice.invoiceDate) {
     changes.push(`التاريخ: ${previousInvoice.invoiceDate} -> ${nextInvoice.invoiceDate}`);
   }
+  if ((previousInvoice.invoiceType || "sale") !== (nextInvoice.invoiceType || "sale")) {
+    changes.push(`النوع: ${getInvoiceTypeLabel(previousInvoice.invoiceType)} -> ${getInvoiceTypeLabel(nextInvoice.invoiceType)}`);
+  }
+  if ((previousInvoice.purchaseType || "") !== (nextInvoice.purchaseType || "")) {
+    changes.push(`نوع الشراء: ${getPurchaseTypeLabel(previousInvoice.purchaseType)} -> ${getPurchaseTypeLabel(nextInvoice.purchaseType)}`);
+  }
   if (normalizeInvoiceText(previousInvoice.customerName) !== normalizeInvoiceText(nextInvoice.customerName)) {
     changes.push(`الزبون: ${normalizeInvoiceText(previousInvoice.customerName) || "بدون"} -> ${normalizeInvoiceText(nextInvoice.customerName) || "بدون"}`);
   }
@@ -76,6 +100,7 @@ function buildInvoiceEditDetails(previousInvoice: any, nextInvoice: any, branche
 export function InvoicesPage() {
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<ViewMode>("list");
+  const [activeInvoiceType, setActiveInvoiceType] = useState<InvoiceType>("sale");
   const [editId, setEditId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; number: string } | null>(null);
@@ -123,7 +148,10 @@ export function InvoicesPage() {
       onSuccess: (createdInvoice: any) => {
         toast({ title: "تم إنشاء الفاتورة بنجاح" });
         invalidateAll();
-        if (user) logActivity(user.username, "إنشاء فاتورة", `رقم الفاتورة: ${createdInvoice?.invoiceNumber ?? ""}`);
+        if (user) {
+          const createdType = createdInvoice?.invoiceType === "purchase" ? "فاتورة شراء" : "فاتورة بيع";
+          logActivity(user.username, "إنشاء فاتورة", `${createdType}: ${createdInvoice?.invoiceNumber ?? ""}`);
+        }
         if (createdInvoice?.id) {
           dismiss();
           window.setTimeout(() => {
@@ -188,6 +216,8 @@ export function InvoicesPage() {
 
   const openEdit = (id: number) => {
     setEditId(id);
+    const invoice = invoicesData?.data?.find((entry) => entry.id === id);
+    setActiveInvoiceType((invoice?.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType);
     setMode("edit");
   };
 
@@ -209,7 +239,8 @@ export function InvoicesPage() {
   };
 
   const totalPages = invoicesData ? Math.ceil(invoicesData.total / 30) : 0;
-  const viewInvoiceSummary = viewInvoice ? summarizeInvoiceLines(viewInvoice.items || []) : null;
+  const viewInvoiceType = (viewInvoice?.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType;
+  const viewInvoiceSummary = viewInvoice ? summarizeInvoiceLines(viewInvoice.items || [], viewInvoiceType) : null;
 
   useEffect(() => {
     if (!invoicesData?.data?.length) return;
@@ -242,6 +273,7 @@ export function InvoicesPage() {
     return (
       <Layout>
         <InvoiceForm
+          invoiceType={activeInvoiceType}
           isSaving={isCreating}
           onSave={handleCreate}
           onCancel={() => setMode("list")}
@@ -274,10 +306,13 @@ export function InvoicesPage() {
     return (
       <Layout>
         <InvoiceForm
+          invoiceType={(editInvoice.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType}
           isEdit
           isSaving={isUpdating}
           initialData={{
             invoiceNumber: editInvoice.invoiceNumber,
+            invoiceType: (editInvoice.invoiceType === "purchase" ? "purchase" : "sale") as InvoiceType,
+            purchaseType: editInvoice.purchaseType,
             branchId: editInvoice.branchId,
             currency: editInvoice.currency as "TRY" | "USD",
             invoiceDate: editInvoice.invoiceDate,
@@ -310,10 +345,23 @@ export function InvoicesPage() {
               {invoicesData && <span className="mr-2">— {invoicesData.total} فاتورة</span>}
             </p>
           </div>
-          <Button onClick={() => setMode("create")} className="invoice-action-button invoice-action-button--primary text-white">
-            <Plus className="w-4 h-4 ml-2" />
-            فاتورة جديدة
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              onClick={() => { setActiveInvoiceType("sale"); setMode("create"); }}
+              className="invoice-action-button invoice-action-button--primary text-white"
+            >
+              <Plus className="w-4 h-4 ml-2" />
+              فاتورة بيع
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => { setActiveInvoiceType("purchase"); setMode("create"); }}
+              className="invoice-action-button border-white/10 text-white hover:bg-white/5"
+            >
+              <Plus className="w-4 h-4 ml-2" />
+              فاتورة شراء
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2.5 sm:flex-row">
@@ -373,8 +421,8 @@ export function InvoicesPage() {
                       <TableCell colSpan={6} className="text-center py-12">
                         <FileText className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
                         <p className="text-muted-foreground">لا توجد فواتير</p>
-                        <Button variant="link" onClick={() => setMode("create")} className="text-primary mt-2">
-                          إنشاء فاتورة جديدة
+                        <Button variant="link" onClick={() => { setActiveInvoiceType("sale"); setMode("create"); }} className="text-primary mt-2">
+                          إنشاء فاتورة بيع
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -384,7 +432,21 @@ export function InvoicesPage() {
                       className="cursor-pointer border-white/6 bg-[#1a1a1d] hover:bg-[#202024]"
                       onClick={() => openView(invoice.id)}
                     >
-                      <TableCell className="text-sm font-medium">{invoice.customerName?.trim() || "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        <div className="flex flex-col gap-1">
+                          <span>{invoice.customerName?.trim() || "—"}</span>
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant="outline" className="border-white/10 bg-white/5 text-[10px]">
+                              {getInvoiceTypeLabel((invoice as any).invoiceType)}
+                            </Badge>
+                            {(invoice as any).invoiceType === "purchase" ? (
+                              <Badge variant="outline" className="border-cyan-500/20 bg-cyan-500/10 text-[10px] text-cyan-300">
+                                {getPurchaseTypeLabel((invoice as any).purchaseType)}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">{formatDate(invoice.invoiceDate)}</TableCell>
                       <TableCell className="text-sm hidden md:table-cell">{invoice.branchName}</TableCell>
                       <TableCell>
@@ -406,7 +468,7 @@ export function InvoicesPage() {
                           <Button variant="ghost" size="icon" onClick={() => handlePrint(invoice.id)} className="h-7 w-7 text-purple-400 hover:text-purple-300 hover:bg-purple-400/10">
                             <Printer className="w-3.5 h-3.5" />
                           </Button>
-                          {user?.isAdmin ? (
+                          {user?.isAdmin && (invoice as any).invoiceType !== "purchase" ? (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -437,8 +499,8 @@ export function InvoicesPage() {
                 <div className="py-12 text-center">
                   <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
                   <p className="text-sm text-muted-foreground">لا توجد فواتير</p>
-                  <Button variant="link" onClick={() => setMode("create")} className="mt-2 text-primary">
-                    إنشاء فاتورة جديدة
+                  <Button variant="link" onClick={() => { setActiveInvoiceType("sale"); setMode("create"); }} className="mt-2 text-primary">
+                    إنشاء فاتورة بيع
                   </Button>
                 </div>
               ) : invoicesData?.data?.map((invoice) => (
@@ -458,7 +520,17 @@ export function InvoicesPage() {
                   <div className="invoice-mobile-card__header">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-bold text-foreground">{invoice.customerName?.trim() || "—"}</div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">{invoice.invoiceNumber}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
+                        <span>{invoice.invoiceNumber}</span>
+                        <Badge variant="outline" className="border-white/10 bg-white/5 text-[9px]">
+                          {getInvoiceTypeLabel((invoice as any).invoiceType)}
+                        </Badge>
+                        {(invoice as any).invoiceType === "purchase" ? (
+                          <Badge variant="outline" className="border-cyan-500/20 bg-cyan-500/10 text-[9px] text-cyan-300">
+                            {getPurchaseTypeLabel((invoice as any).purchaseType)}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </div>
                     <Badge variant="outline" className={`shrink-0 text-[10px] border-white/10 ${invoice.currency === "USD" ? "bg-blue-500/10 text-blue-400" : "bg-orange-500/10 text-orange-400"}`}>
                       {invoice.currency}
@@ -498,7 +570,7 @@ export function InvoicesPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    {user?.isAdmin ? (
+                    {user?.isAdmin && (invoice as any).invoiceType !== "purchase" ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -594,10 +666,16 @@ export function InvoicesPage() {
               </div>
               {viewInvoice.customerName && (
                 <div className="invoice-view-block">
-                  <p className="text-[10px] text-muted-foreground mb-1">الزبون / المورد</p>
+                  <p className="text-[10px] text-muted-foreground mb-1">{viewInvoiceType === "purchase" ? "المورد / الجهة" : "الزبون / العميل"}</p>
                   <p className="font-bold text-sm">{viewInvoice.customerName}</p>
                 </div>
               )}
+              {viewInvoiceType === "purchase" && viewInvoice.purchaseType ? (
+                <div className="invoice-view-block">
+                  <p className="text-[10px] text-muted-foreground mb-1">نوع الشراء</p>
+                  <p className="font-bold text-sm">{getPurchaseTypeLabel(viewInvoice.purchaseType)}</p>
+                </div>
+              ) : null}
               {viewInvoice.notes && (
                 <div className="invoice-view-block">
                   <p className="text-[10px] text-muted-foreground mb-1">ملاحظات</p>
@@ -623,7 +701,7 @@ export function InvoicesPage() {
                           <div className="invoice-detail-pair__value">{formatNumber(item.quantity)}</div>
                         </div>
                         <div>
-                          <div className="invoice-detail-pair__label">سعر البيع</div>
+                          <div className="invoice-detail-pair__label">{viewInvoiceType === "purchase" ? "السعر" : "سعر البيع"}</div>
                           <div className="invoice-detail-pair__value">{formatCurrency(item.unitPrice, viewInvoice.currency)}</div>
                         </div>
                       </div>
@@ -634,7 +712,7 @@ export function InvoicesPage() {
 
               <div className="grid grid-cols-3 gap-2 border border-white/8 rounded-xl px-2 py-2.5">
                 <div className="text-center">
-                  <p className="text-[10px] text-blue-400 mb-0.5">إجمالي المبيعات</p>
+                  <p className="text-[10px] text-blue-400 mb-0.5">{viewInvoiceType === "purchase" ? "إجمالي الشراء" : "إجمالي المبيعات"}</p>
                   <p className="text-sm font-bold text-blue-400">{formatCurrency(viewInvoiceSummary?.revenue ?? viewInvoice.totalAmount, viewInvoice.currency)}</p>
                 </div>
                 <div className="text-center border-x border-white/8">
@@ -642,7 +720,7 @@ export function InvoicesPage() {
                   <p className="text-sm font-bold text-rose-400">{formatCurrency(viewInvoiceSummary?.totalCost ?? viewInvoice.totalCost, viewInvoice.currency)}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-emerald-400 mb-0.5">صافي الربح</p>
+                  <p className="text-[10px] text-emerald-400 mb-0.5">{viewInvoiceType === "purchase" ? "الفرق" : "صافي الربح"}</p>
                   <p className="text-sm font-bold text-emerald-400">{formatCurrency(viewInvoiceSummary?.profit ?? viewInvoice.totalProfit, viewInvoice.currency)}</p>
                 </div>
               </div>

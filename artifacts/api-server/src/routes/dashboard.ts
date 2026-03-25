@@ -26,6 +26,7 @@ async function getDerivedInventoryKpis() {
         COALESCE(SUM(inv_items.quantity::numeric), 0) as sold_qty
       FROM invoice_items inv_items
       JOIN invoices inv ON inv.id = inv_items.invoice_id
+      AND inv.invoice_type = 'sale'
       JOIN latest_import li ON li.item_id = inv_items.item_id AND inv.invoice_date > li.import_date
       GROUP BY inv_items.item_id
     ),
@@ -63,11 +64,12 @@ async function getDerivedInvoiceKpis(query: {
   branchId?: number;
 }) {
   const conditions = buildInvoiceFilters(invoicesTable, query);
+  const saleConditions = sql`${conditions} AND ${invoicesTable.invoiceType} = 'sale'`;
   const result = await db.execute(sql`
     WITH filtered_invoices AS (
       SELECT id, currency
       FROM invoices
-      WHERE ${conditions}
+      WHERE ${saleConditions}
     ),
     invoice_totals AS (
       SELECT
@@ -114,6 +116,7 @@ async function getDerivedSalesSeries(query: {
   groupBy: "daily" | "monthly";
 }) {
   const conditions = buildInvoiceFilters(invoicesTable, query);
+  const saleConditions = sql`${conditions} AND ${invoicesTable.invoiceType} = 'sale'`;
   const period = query.groupBy === "monthly"
     ? sql`TO_CHAR(invoice_date::date, 'YYYY-MM')`
     : sql`invoice_date`;
@@ -122,7 +125,7 @@ async function getDerivedSalesSeries(query: {
     WITH filtered_invoices AS (
       SELECT id, invoice_date, currency
       FROM invoices
-      WHERE ${conditions}
+      WHERE ${saleConditions}
     ),
     invoice_totals AS (
       SELECT

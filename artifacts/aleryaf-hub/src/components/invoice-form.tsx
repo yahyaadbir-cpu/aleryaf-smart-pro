@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/format";
-import { getInvoiceLineTotals, summarizeInvoiceLines } from "@/lib/invoice-math";
+import { getInvoiceLineTotals, summarizeInvoiceLines, type InvoiceKind } from "@/lib/invoice-math";
 import { Plus, Trash2, X, Save, ArrowRight, AlertCircle } from "lucide-react";
+
+type PurchaseType = "local_syria" | "local_turkey" | "import";
 
 interface LineItem {
   key: string;
@@ -54,6 +56,8 @@ interface InvoiceNumberOption {
 
 interface InvoiceFormData {
   invoiceNumber: string;
+  invoiceType: InvoiceKind;
+  purchaseType?: PurchaseType;
   branchId: number | null;
   currency: "TRY" | "USD";
   invoiceDate: string;
@@ -63,12 +67,15 @@ interface InvoiceFormData {
 }
 
 interface InvoiceFormProps {
+  invoiceType: InvoiceKind;
   initialData?: InvoiceFormData;
   isEdit?: boolean;
   isSaving: boolean;
   onSave: (data: {
     invoiceNumber: string;
     createdBy?: string;
+    invoiceType: InvoiceKind;
+    purchaseType?: PurchaseType;
     branchId: number;
     currency: "TRY" | "USD";
     invoiceDate: string;
@@ -78,6 +85,12 @@ interface InvoiceFormProps {
   }) => void;
   onCancel: () => void;
 }
+
+const PURCHASE_TYPE_OPTIONS: Array<{ value: PurchaseType; label: string }> = [
+  { value: "local_syria", label: "محلي سوريا" },
+  { value: "local_turkey", label: "محلي تركيا" },
+  { value: "import", label: "استيراد" },
+];
 
 let lineKeyCounter = 0;
 
@@ -133,8 +146,50 @@ function normalizeBranchName(name?: string | null) {
   return (name || "").trim().toLowerCase();
 }
 
-export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }: InvoiceFormProps) {
+function getFormLabels(invoiceType: InvoiceKind) {
+  if (invoiceType === "purchase") {
+    return {
+      title: "فاتورة شراء",
+      subtitle: "إدخال شراء جديد",
+      customer: "اسم المورد / الجهة",
+      notes: "ملاحظات",
+      lineTitle: "بنود الشراء",
+      lineHint: "الصنف · الكمية · السعر",
+      item: "الصنف",
+      quantity: "الكمية",
+      price: "السعر",
+      total: "الإجمالي",
+      totalCard: "إجمالي الشراء",
+      save: "حفظ فاتورة الشراء",
+      update: "تحديث فاتورة الشراء",
+      purchaseType: "نوع الشراء",
+    };
+  }
+
+  return {
+    title: "فاتورة بيع",
+    subtitle: "إدخال بيع جديد",
+    customer: "اسم الزبون / الجهة",
+    notes: "ملاحظات",
+    lineTitle: "بنود الفاتورة",
+    lineHint: "الصنف · الكمية · السعر",
+    item: "الصنف",
+    quantity: "الكمية (كغ)",
+    price: "سعر البيع/طن",
+    total: "الإجمالي",
+    totalCard: "إجمالي المبيعات",
+    save: "حفظ فاتورة البيع",
+    update: "تحديث فاتورة البيع",
+    purchaseType: "نوع الشراء",
+  };
+}
+
+export function InvoiceForm({ invoiceType, initialData, isEdit, isSaving, onSave, onCancel }: InvoiceFormProps) {
+  const effectiveInvoiceType = initialData?.invoiceType ?? invoiceType;
+  const labels = getFormLabels(effectiveInvoiceType);
+
   const [invoiceNumber] = useState(initialData?.invoiceNumber || "");
+  const [purchaseType, setPurchaseType] = useState<PurchaseType | "">(initialData?.purchaseType || "");
   const [branchId, setBranchId] = useState(initialData?.branchId?.toString() || "");
   const [currency, setCurrency] = useState<"TRY" | "USD">(initialData?.currency || "USD");
   const [invoiceDate, setInvoiceDate] = useState(initialData?.invoiceDate || new Date().toISOString().split("T")[0]);
@@ -151,7 +206,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
   const { data: allItems } = useGetItems({});
   const { data: inventoryItems } = useGetInventory({});
   const { data: branches } = useGetBranches();
-  const { data: invoicesData } = useGetInvoices({ page: 1, limit: 200 });
+  const { data: invoicesData } = useGetInvoices({ page: 1, limit: 300 });
 
   const typedItems = (allItems ?? []) as ItemOption[];
   const typedInventoryItems = (inventoryItems ?? []) as InventoryOption[];
@@ -190,8 +245,8 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
   }, []);
 
   const resolveLinePricing = useCallback((itemId: number) => {
-    const item = typedItems.find((candidate: ItemOption) => candidate.id === itemId);
-    const inventoryItem = typedInventoryItems.find((candidate: InventoryOption) => candidate.itemId === itemId);
+    const item = typedItems.find((candidate) => candidate.id === itemId);
+    const inventoryItem = typedInventoryItems.find((candidate) => candidate.itemId === itemId);
     const isUsd = currency === "USD";
 
     const unitCost =
@@ -199,14 +254,15 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
       (isUsd ? item?.unitCostUsd : item?.unitCostTry) ??
       0;
 
-    const unitPrice = (isUsd ? item?.unitPriceUsd : item?.unitPriceTry) ?? 0;
+    const saleUnitPrice = (isUsd ? item?.unitPriceUsd : item?.unitPriceTry) ?? 0;
+    const purchaseUnitPrice = unitCost;
 
     return {
       item,
       unitCost,
-      unitPriceInput: unitPrice === 0 ? "" : String(unitPrice),
+      unitPriceInput: String(effectiveInvoiceType === "purchase" ? purchaseUnitPrice : saleUnitPrice || ""),
     };
-  }, [typedInventoryItems, typedItems, currency]);
+  }, [currency, effectiveInvoiceType, typedInventoryItems, typedItems]);
 
   const selectItem = useCallback((lineKey: string, itemId: number) => {
     const { item, unitCost, unitPriceInput } = resolveLinePricing(itemId);
@@ -218,7 +274,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
           ? {
               ...line,
               itemId: item.id,
-              rawName: item.name,
+              rawName: item.nameAr || item.name,
               unitCost,
               unitPriceInput,
             }
@@ -231,7 +287,6 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const userAgent = window.navigator.userAgent || "";
     setUseNativeBranchSelect(/iPhone|iPad|iPod/i.test(userAgent));
   }, []);
@@ -255,12 +310,10 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
   useEffect(() => {
     if (isEdit || initialData?.branchId || branchId || !typedBranches.length) return;
-
-    const defaultBranch = typedBranches.find((branch: BranchOption) => {
+    const defaultBranch = typedBranches.find((branch) => {
       const normalized = normalizeBranchName(branch.name);
-      return normalized.includes("\u0633\u0648\u0631\u064a\u0627") || normalized.includes("syria");
+      return normalized.includes("سوريا") || normalized.includes("syria");
     });
-
     if (defaultBranch) {
       setBranchId(defaultBranch.id.toString());
     }
@@ -268,31 +321,24 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
   const numericLines = useMemo(() => lines.map(toBusinessLine), [lines]);
 
-  const summary = useMemo(() => {
-    const totals = summarizeInvoiceLines(numericLines);
-    return {
-      subtotal: totals.revenue,
-      totalCost: totals.totalCost,
-      totalProfit: totals.profit,
-      itemCount: lines.length,
-    };
-  }, [numericLines, lines.length]);
+  const summary = useMemo(() => summarizeInvoiceLines(numericLines, effectiveInvoiceType), [effectiveInvoiceType, numericLines]);
 
   const validate = () => {
     const errs: string[] = [];
 
     if (!branchId) errs.push("الفرع مطلوب");
     if (!invoiceDate) errs.push("التاريخ مطلوب");
-    if (!customerName.trim()) errs.push("اسم الزبون مطلوب");
+    if (!customerName.trim()) errs.push(effectiveInvoiceType === "purchase" ? "اسم المورد مطلوب" : "اسم الزبون مطلوب");
+    if (effectiveInvoiceType === "purchase" && !purchaseType) errs.push("نوع الشراء مطلوب");
     if (lines.length === 0) errs.push("يجب إضافة بند واحد على الأقل");
 
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
       const numericLine = numericLines[i];
 
-      if (!line.itemId && !line.rawName.trim()) errs.push(`السطر ${i + 1}: المنتج مطلوب`);
+      if (!line.itemId && !line.rawName.trim()) errs.push(`السطر ${i + 1}: الصنف مطلوب`);
       if (!line.quantityInput.trim() || numericLine.quantity <= 0) errs.push(`السطر ${i + 1}: الكمية يجب أن تكون أكبر من صفر`);
-      if (!line.unitPriceInput.trim() || numericLine.unitPrice < 0) errs.push(`السطر ${i + 1}: سعر البيع يجب أن يكون صفراً أو أكثر`);
+      if (!line.unitPriceInput.trim() || numericLine.unitPrice < 0) errs.push(`السطر ${i + 1}: السعر يجب أن يكون صفراً أو أكثر`);
     }
 
     setErrors(errs);
@@ -302,10 +348,12 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
   const handleSave = () => {
     if (!validate()) return;
 
+    const prefix = effectiveInvoiceType === "purchase" ? "PUR" : "INV";
     const generatedInvoiceNumber = isEdit
       ? invoiceNumber
-      : `INV${String(
-          typedInvoices.reduce((max: number, invoice: InvoiceNumberOption) => {
+      : `${prefix}${String(
+          typedInvoices.reduce((max, invoice) => {
+            if (!invoice.invoiceNumber.startsWith(prefix)) return max;
             const match = invoice.invoiceNumber.match(/(\d+)(?!.*\d)/);
             return Math.max(max, match ? parseInt(match[1], 10) : 0);
           }, 0) + 1,
@@ -313,6 +361,8 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
     onSave({
       invoiceNumber: generatedInvoiceNumber,
+      invoiceType: effectiveInvoiceType,
+      purchaseType: effectiveInvoiceType === "purchase" ? purchaseType || undefined : undefined,
       branchId: parseInt(branchId, 10),
       currency,
       invoiceDate,
@@ -323,7 +373,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
         rawName: line.rawName || undefined,
         quantity: line.quantity,
         unitPrice: line.unitPrice,
-        unitCost: line.unitCost,
+        unitCost: effectiveInvoiceType === "purchase" ? line.unitPrice : line.unitCost,
       })),
     });
   };
@@ -342,15 +392,10 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
           </Button>
           <div className="min-w-0">
             <h1 className="invoice-page-title font-display font-bold text-foreground">
-              {isEdit ? "تعديل الفاتورة" : "فاتورة جديدة"}
+              {isEdit ? labels.update : labels.title}
             </h1>
-            <p className="invoice-page-subtitle">{isEdit ? `#${invoiceNumber}` : "إدخال سريع"}</p>
+            <p className="invoice-page-subtitle">{isEdit ? `#${invoiceNumber}` : labels.subtitle}</p>
           </div>
-        </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          <Button variant="outline" onClick={onCancel} className="invoice-action-button invoice-action-button--subtle">
-            إلغاء
-          </Button>
         </div>
       </div>
 
@@ -384,8 +429,26 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
               />
             </div>
 
+            {effectiveInvoiceType === "purchase" ? (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold">{labels.purchaseType}</label>
+                <Select value={purchaseType} onValueChange={(value) => setPurchaseType(value as PurchaseType)}>
+                  <SelectTrigger className="invoice-input">
+                    <SelectValue placeholder="اختر نوع الشراء" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PURCHASE_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
             <div className="space-y-1.5">
-              <label className="block text-sm font-semibold">الزبون / الشخص</label>
+              <label className="block text-sm font-semibold">{labels.customer}</label>
               <Input
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
@@ -403,7 +466,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                   className="invoice-input h-10 w-full appearance-auto px-3 py-2 text-sm"
                 >
                   <option value="">اختر الفرع</option>
-                  {typedBranches.map((branch: BranchOption) => (
+                  {typedBranches.map((branch) => (
                     <option key={branch.id} value={branch.id.toString()}>
                       {branch.name}
                     </option>
@@ -415,7 +478,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     <SelectValue placeholder="اختر الفرع" />
                   </SelectTrigger>
                   <SelectContent>
-                    {typedBranches.map((branch: BranchOption) => (
+                    {typedBranches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id.toString()}>
                         {branch.name}
                       </SelectItem>
@@ -450,7 +513,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-sm font-semibold">ملاحظات</label>
+              <label className="block text-sm font-semibold">{labels.notes}</label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -466,27 +529,27 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
         <div className="invoice-form-section">
           <div className="mb-3 flex items-center justify-between">
-            <p className="invoice-form-section__title mb-0">بنود الفاتورة</p>
-            <p className="text-[11px] text-muted-foreground">المنتج · الكمية · السعر</p>
+            <p className="invoice-form-section__title mb-0">{labels.lineTitle}</p>
+            <p className="text-[11px] text-muted-foreground">{labels.lineHint}</p>
           </div>
           <div className="mb-3 hidden xl:grid xl:grid-cols-[minmax(0,2.1fr)_110px_120px_150px_44px] xl:gap-2 xl:px-1 text-xs font-medium text-muted-foreground">
-            <span>المنتج</span>
-            <span>الكمية (كغ)</span>
-            <span>سعر البيع/طن</span>
-            <span>الإجمالي</span>
+            <span>{labels.item}</span>
+            <span>{labels.quantity}</span>
+            <span>{labels.price}</span>
+            <span>{labels.total}</span>
             <span />
           </div>
 
           <div className="flex flex-col gap-3 sm:gap-4">
             {lines.map((line, idx) => {
               const numericLine = numericLines[idx];
-              const lineTotals = getInvoiceLineTotals(numericLine);
+              const lineTotals = getInvoiceLineTotals(numericLine, effectiveInvoiceType);
               const searchVal = itemSearch[line.key] || "";
               const filteredItems =
                 searchVal.length > 0
                   ? typedItems
                       .filter(
-                        (item: ItemOption) =>
+                        (item) =>
                           item.name.toLowerCase().includes(searchVal.toLowerCase()) ||
                           item.code.toLowerCase().includes(searchVal.toLowerCase()) ||
                           (item.nameAr && item.nameAr.includes(searchVal)),
@@ -526,21 +589,21 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                         <Input
                           value={searchVal}
                           onChange={(e) => setItemSearch((prev) => ({ ...prev, [line.key]: e.target.value }))}
-                          placeholder="ابحث عن المنتج..."
+                          placeholder="ابحث عن الصنف..."
                           className="invoice-input min-h-10 text-sm"
                         />
                       )}
 
                       {!line.itemId && filteredItems.length > 0 ? (
                         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-2xl border border-white/10 bg-card shadow-xl">
-                          {filteredItems.map((item: ItemOption) => (
+                          {filteredItems.map((item) => (
                             <button
                               key={item.id}
                               type="button"
                               onClick={() => selectItem(line.key, item.id)}
                               className="flex w-full items-center justify-between px-3 py-2 text-right text-sm hover:bg-white/5"
                             >
-                              <span>{item.name}</span>
+                              <span>{item.nameAr || item.name}</span>
                               <span className="font-mono text-xs text-muted-foreground">{item.code}</span>
                             </button>
                           ))}
@@ -550,7 +613,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
                     <Input
                       type="text"
-                      inputMode="text"
+                      inputMode="decimal"
                       autoComplete="off"
                       value={line.quantityInput}
                       onChange={(e) => updateLine(line.key, "quantityInput", e.target.value)}
@@ -560,7 +623,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
                     <Input
                       type="text"
-                      inputMode="text"
+                      inputMode="decimal"
                       autoComplete="off"
                       value={line.unitPriceInput}
                       onChange={(e) => updateLine(line.key, "unitPriceInput", e.target.value)}
@@ -587,7 +650,7 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
 
                   <div className="space-y-4 xl:hidden">
                     <div className="relative">
-                      <label className="mb-1.5 block text-sm font-semibold">الصنف</label>
+                      <label className="mb-1.5 block text-sm font-semibold">{labels.item}</label>
                       {line.itemId ? (
                         <div className="invoice-line-picker flex items-center gap-2 rounded-2xl px-3 py-2.5">
                           <span className="flex-1 truncate text-sm font-medium">{line.rawName}</span>
@@ -603,21 +666,21 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                         <Input
                           value={searchVal}
                           onChange={(e) => setItemSearch((prev) => ({ ...prev, [line.key]: e.target.value }))}
-                          placeholder="ابحث عن المنتج..."
+                          placeholder="ابحث عن الصنف..."
                           className="invoice-input text-sm"
                         />
                       )}
 
                       {!line.itemId && filteredItems.length > 0 ? (
                         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-auto rounded-2xl border border-white/10 bg-card shadow-xl">
-                          {filteredItems.map((item: ItemOption) => (
+                          {filteredItems.map((item) => (
                             <button
                               key={item.id}
                               type="button"
                               onClick={() => selectItem(line.key, item.id)}
                               className="flex w-full items-center justify-between px-3 py-2 text-right text-sm hover:bg-white/5"
                             >
-                              <span>{item.name}</span>
+                              <span>{item.nameAr || item.name}</span>
                               <span className="font-mono text-xs text-muted-foreground">{item.code}</span>
                             </button>
                           ))}
@@ -626,10 +689,10 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold">الكمية (كغ)</label>
+                      <label className="block text-sm font-semibold">{labels.quantity}</label>
                       <Input
                         type="text"
-                        inputMode="text"
+                        inputMode="decimal"
                         autoComplete="off"
                         value={line.quantityInput}
                         onChange={(e) => updateLine(line.key, "quantityInput", e.target.value)}
@@ -639,21 +702,20 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-semibold">السعر</label>
+                      <label className="block text-sm font-semibold">{labels.price}</label>
                       <Input
                         type="text"
-                        inputMode="text"
+                        inputMode="decimal"
                         autoComplete="off"
                         value={line.unitPriceInput}
                         onChange={(e) => updateLine(line.key, "unitPriceInput", e.target.value)}
                         className="invoice-input text-sm"
-                        placeholder="مثال 1500"
                         dir="ltr"
                       />
                     </div>
 
                     <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                      <span className="text-sm font-semibold text-muted-foreground">الإجمالي</span>
+                      <span className="text-sm font-semibold text-muted-foreground">{labels.total}</span>
                       <span className="text-base font-bold text-foreground" dir="ltr">
                         {formatCurrency(lineTotals.revenue, currency)}
                       </span>
@@ -675,25 +737,26 @@ export function InvoiceForm({ initialData, isEdit, isSaving, onSave, onCancel }:
         <div className="invoice-form-sep" />
 
         <div className="invoice-form-section invoice-form-section--totals">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div className="invoice-summary-card rounded-2xl p-3">
-              <p className="mb-1 text-[11px] text-muted-foreground">إجمالي المبيعات</p>
-              <p className="text-lg font-bold text-foreground" dir="ltr">{formatCurrency(summary.subtotal, currency)}</p>
+              <p className="mb-1 text-[11px] text-muted-foreground">{labels.totalCard}</p>
+              <p className="text-lg font-bold text-foreground" dir="ltr">{formatCurrency(summary.revenue, currency)}</p>
             </div>
-
-            <div className="invoice-summary-card invoice-summary-card--profit rounded-2xl p-3">
-              <p className="mb-1 text-[11px] text-emerald-200/80">صافي الربح</p>
-              <p className={`text-lg font-bold ${summary.totalProfit >= 0 ? "text-emerald-200" : "text-rose-200"}`} dir="ltr">
-                {formatCurrency(summary.totalProfit, currency)}
-              </p>
-            </div>
+            {effectiveInvoiceType === "sale" ? (
+              <div className="invoice-summary-card invoice-summary-card--profit rounded-2xl p-3">
+                <p className="mb-1 text-[11px] text-emerald-200/80">صافي الربح</p>
+                <p className={`text-lg font-bold ${summary.profit >= 0 ? "text-emerald-200" : "text-rose-200"}`} dir="ltr">
+                  {formatCurrency(summary.profit, currency)}
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
       <Button onClick={handleSave} disabled={isSaving} className="invoice-save-button invoice-action-button w-full rounded-2xl text-base font-bold text-white">
         <Save className="ml-2 h-4 w-4" />
-        {isSaving ? "جارٍ الحفظ..." : isEdit ? "تحديث الفاتورة" : "حفظ الفاتورة"}
+        {isSaving ? "جارٍ الحفظ..." : isEdit ? labels.update : labels.save}
       </Button>
     </div>
   );
