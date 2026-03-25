@@ -17,12 +17,13 @@ When secrets were exposed or you suspect compromise:
    Existing browser push subscriptions will need to re-register.
 4. Rotate `ADMIN_BOOTSTRAP_PASSWORD` and disable it after initial bootstrap.
 5. Rotate `HANDBOOK_MASTER_PASSWORD` if it was ever shared outside authorized operators.
-6. Review audit logs for:
+6. If Google sign-in is enabled, keep `GOOGLE_ALLOWED_EMAILS` and `GOOGLE_ADMIN_EMAILS` as explicit allowlists and review them during offboarding.
+7. Review audit logs for:
    - login failures
    - invite creation and redemption
    - session revocations
    - admin actions
-7. Invalidate all active sessions by deleting rows from `auth_sessions` or using the revoke sessions control.
+8. Invalidate all active sessions by deleting rows from `auth_sessions` or using the revoke sessions control.
 
 ## Local Development
 

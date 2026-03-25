@@ -12,6 +12,8 @@ import {
 import { createRateLimitMiddleware } from "../lib/rate-limit";
 import { writeSecurityAuditEvent } from "../lib/audit";
 import { redeemInvite } from "../lib/invites";
+import { authenticateWithGoogleIdToken, isGoogleAuthEnabled } from "../lib/google-auth";
+import { appEnv } from "../lib/env";
 
 const router: IRouter = Router();
 
@@ -24,6 +26,10 @@ const redeemInviteBodySchema = z.object({
   token: z.string().min(20),
   username: z.string().trim().min(1),
   password: z.string().min(12).max(128),
+});
+
+const googleLoginBodySchema = z.object({
+  credential: z.string().min(100),
 });
 
 const loginRateLimit = createRateLimitMiddleware({
@@ -46,6 +52,15 @@ const inviteRedeemRateLimit = createRateLimitMiddleware({
   includeUsername: true,
 });
 
+const googleLoginRateLimit = createRateLimitMiddleware({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 8,
+  blockDurationMs: 15 * 60 * 1000,
+  keyPrefix: "google-login",
+  eventType: "auth.google_login_rate_limit",
+  message: "محاولات كثيرة لتسجيل الدخول عبر Google. حاول مرة أخرى بعد قليل.",
+});
+
 router.get("/csrf", (_req, res) => {
   res.status(204).send();
 });
@@ -53,6 +68,13 @@ router.get("/csrf", (_req, res) => {
 router.get("/bootstrap-status", (_req, res) => {
   res.json({
     adminBootstrapConfigured: HAS_CONFIGURED_ADMIN_BOOTSTRAP,
+  });
+});
+
+router.get("/google/config", (_req, res) => {
+  res.json({
+    enabled: isGoogleAuthEnabled(),
+    clientId: isGoogleAuthEnabled() ? appEnv.GOOGLE_CLIENT_ID ?? null : null,
   });
 });
 
@@ -107,6 +129,47 @@ router.post("/login", loginRateLimit, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to login");
     res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+router.post("/google", googleLoginRateLimit, async (req, res) => {
+  try {
+    const body = googleLoginBodySchema.parse(req.body);
+    const result = await authenticateWithGoogleIdToken(body.credential);
+
+    if (!result.ok) {
+      await writeSecurityAuditEvent({
+        req,
+        eventType: "auth.google_login",
+        outcome: "failure",
+      });
+      res.status(result.error === "This Google account is not allowed" ? 403 : 401).json({ error: result.error });
+      return;
+    }
+
+    await createSession(result.user, res);
+    await db.insert(activityLogTable).values({
+      username: result.user.username,
+      action: "تسجيل دخول عبر Google",
+      details: result.user.isAdmin ? "دخول بحساب إداري" : "دخول بحساب مستخدم",
+    });
+    await writeSecurityAuditEvent({
+      req,
+      eventType: "auth.google_login",
+      outcome: "success",
+      actorUserId: result.user.id,
+      actorUsername: result.user.username,
+      metadata: {
+        isAdmin: result.user.isAdmin,
+        created: result.created,
+      },
+    });
+    res.json({ user: result.user });
+  } catch (err) {
+    req.log.error({ err }, "Failed to login with Google");
+    const message = err instanceof Error ? err.message : "Failed to login with Google";
+    const status = /not configured|not verified|jwt|token/i.test(message) ? 401 : 500;
+    res.status(status).json({ error: status === 500 ? "Failed to login with Google" : message });
   }
 });
 

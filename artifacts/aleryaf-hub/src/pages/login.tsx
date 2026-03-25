@@ -1,12 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { LockKeyhole, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { APP_NAME_AR, APP_NAME_EN, APP_TAGLINE_AR } from "@/lib/branding";
+import { apiFetch } from "@/lib/http";
 import { ensurePushSubscription } from "@/lib/push-notifications";
 
+type GoogleConfigResponse = {
+  enabled: boolean;
+  clientId: string | null;
+};
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            options: {
+              theme?: "outline" | "filled_blue" | "filled_black";
+              size?: "large" | "medium" | "small";
+              shape?: "rectangular" | "pill" | "circle" | "square";
+              text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+              width?: number;
+              locale?: string;
+            },
+          ) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
+
 export function LoginPage() {
-  const { user, login, redeemInvite } = useAuth();
+  const { user, login, googleLogin, redeemInvite } = useAuth();
   const [, navigate] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -14,12 +47,110 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "invite">("login");
+  const [googleConfig, setGoogleConfig] = useState<GoogleConfigResponse>({ enabled: false, clientId: null });
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (user) {
       navigate("/");
     }
   }, [navigate, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    apiFetch("/api/auth/google/config")
+      .then((response) => response.json() as Promise<GoogleConfigResponse>)
+      .then((config) => {
+        if (!cancelled) {
+          setGoogleConfig(config);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGoogleConfig({ enabled: false, clientId: null });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!googleConfig.enabled || !googleConfig.clientId || !googleButtonRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    const clientId = googleConfig.clientId;
+
+    const renderGoogleButton = () => {
+      if (cancelled || !window.google || !googleButtonRef.current) {
+        return;
+      }
+
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response) => {
+          if (!response.credential) {
+            setError("تعذر استلام بيانات تسجيل Google");
+            return;
+          }
+
+          setError("");
+          setLoading(true);
+          const result = await googleLogin(response.credential);
+
+          if (result.ok) {
+            try {
+              await ensurePushSubscription({
+                username: result.user?.username ?? "",
+                isAdmin: Boolean(result.user?.isAdmin),
+              });
+            } catch {
+            }
+
+            navigate("/");
+            setLoading(false);
+            return;
+          }
+
+          setError(result.error || "تعذر تسجيل الدخول عبر Google");
+          setLoading(false);
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "filled_blue",
+        size: "large",
+        shape: "pill",
+        text: "continue_with",
+        width: 320,
+        locale: "ar",
+      });
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]');
+    if (existingScript) {
+      renderGoogleButton();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    script.onload = () => renderGoogleButton();
+    document.head.appendChild(script);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleConfig.clientId, googleConfig.enabled, googleLogin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +284,15 @@ export function LoginPage() {
                   <p className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-300">
                     {error}
                   </p>
+                ) : null}
+
+                {mode === "login" && googleConfig.enabled ? (
+                  <div className="mt-5">
+                    <div className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
+                      أو
+                    </div>
+                    <div className="flex justify-center" ref={googleButtonRef} />
+                  </div>
                 ) : null}
 
                 <button

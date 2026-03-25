@@ -11,4 +11,5 @@
 - [ ] Verify disabled users lose access immediately
 - [ ] Verify handbook endpoint returns safe metadata only
 - [ ] Verify invite tokens expire and cannot be reused
+- [ ] Verify Google sign-in, if enabled, is restricted to explicit allowlisted email addresses
 - [ ] Verify logs do not contain cookies, passwords, tokens, or secret env values

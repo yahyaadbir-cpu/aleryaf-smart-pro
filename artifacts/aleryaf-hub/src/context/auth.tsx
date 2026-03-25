@@ -18,6 +18,7 @@ interface AuthContextType {
   user: AuthUser | null;
   ready: boolean;
   login: (username: string, password: string) => Promise<LoginResult>;
+  googleLogin: (credential: string) => Promise<LoginResult>;
   redeemInvite: (token: string, username: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -74,6 +75,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok || !data.user) {
         return { ok: false, error: data.error || "خطأ في تسجيل الدخول" };
+      }
+
+      setUser(data.user);
+      return { ok: true, user: data.user };
+    },
+    googleLogin: async (credential: string) => {
+      const response = await apiFetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          credential,
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
+
+      if (!response.ok || !data.user) {
+        return { ok: false, error: data.error || "تعذر تسجيل الدخول عبر Google" };
       }
 
       setUser(data.user);

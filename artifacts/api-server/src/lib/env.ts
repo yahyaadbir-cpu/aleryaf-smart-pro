@@ -18,6 +18,9 @@ const envSchema = z.object({
   HANDBOOK_MASTER_PASSWORD: z.string().min(12).optional(),
   ADMIN_BOOTSTRAP_USERNAME: z.string().min(1).optional(),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().min(12).optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_ALLOWED_EMAILS: z.string().min(1).optional(),
+  GOOGLE_ADMIN_EMAILS: z.string().min(1).optional(),
   LOG_LEVEL: z.string().min(1).default("info"),
 });
 
@@ -62,6 +65,12 @@ function validateEnvironment() {
     }
     if (!env.ADMIN_BOOTSTRAP_USERNAME && env.ADMIN_BOOTSTRAP_PASSWORD) {
       productionIssues.push("ADMIN_BOOTSTRAP_USERNAME is required when ADMIN_BOOTSTRAP_PASSWORD is set");
+    }
+    if ((env.GOOGLE_ALLOWED_EMAILS || env.GOOGLE_ADMIN_EMAILS) && !env.GOOGLE_CLIENT_ID) {
+      productionIssues.push("GOOGLE_CLIENT_ID is required when Google email allowlists are configured");
+    }
+    if (env.GOOGLE_CLIENT_ID && !env.GOOGLE_ALLOWED_EMAILS && !env.GOOGLE_ADMIN_EMAILS) {
+      productionIssues.push("GOOGLE_ALLOWED_EMAILS or GOOGLE_ADMIN_EMAILS must be configured when GOOGLE_CLIENT_ID is set");
     }
     if (productionIssues.length > 0) {
       throw new Error(formatIssues("Production environment validation failed", productionIssues));
