@@ -323,8 +323,8 @@ router.post("/", async (req, res) => {
       unmatchedItems: unmatchedNames,
     });
 
-    await evaluateRollingFinancialAlerts();
-    await evaluateStockDepletionAlerts();
+    await evaluateRollingFinancialAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate financial alerts"));
+    await evaluateStockDepletionAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate stock alerts"));
   } catch (err) {
     req.log.error({ err }, "Error creating invoice");
     sendRouteError(req, res, err);
@@ -486,11 +486,11 @@ router.put("/:id", async (req, res) => {
           url: "/admin-log",
           tag: `printed-invoice-edited-${invoice.id}`,
         },
-      });
+      }).catch((error) => req.log.error({ err: error }, "Failed to send printed invoice update notification"));
     }
 
-    await evaluateRollingFinancialAlerts();
-    await evaluateStockDepletionAlerts();
+    await evaluateRollingFinancialAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate financial alerts"));
+    await evaluateStockDepletionAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate stock alerts"));
   } catch (err) {
     req.log.error({ err }, "Error updating invoice");
     sendRouteError(req, res, err);
@@ -524,10 +524,10 @@ router.delete("/:id", async (req, res) => {
         url: "/admin-log",
         tag: `invoice-deleted-${invoice.id}`,
       },
-    });
+    }).catch((error) => req.log.error({ err: error }, "Failed to send invoice delete notification"));
 
-    await evaluateRollingFinancialAlerts();
-    await evaluateStockDepletionAlerts();
+    await evaluateRollingFinancialAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate financial alerts"));
+    await evaluateStockDepletionAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate stock alerts"));
   } catch (err) {
     req.log.error({ err }, "Error deleting invoice");
     res.status(500).json({ error: "Internal server error" });

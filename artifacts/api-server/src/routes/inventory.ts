@@ -240,7 +240,7 @@ router.post("/import", async (req, res) => {
       unmatchedItems,
     });
 
-    await evaluateStockDepletionAlerts();
+    await evaluateStockDepletionAlerts().catch((error) => req.log.error({ err: error }, "Failed to evaluate stock alerts"));
   } catch (err) {
     req.log.error({ err }, "Error importing inventory");
     sendRouteError(req, res, err);

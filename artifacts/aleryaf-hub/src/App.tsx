@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,6 +17,7 @@ import { InvoicePrintPage } from "@/pages/invoice-print";
 import { BranchesPage } from "@/pages/branches";
 import { LoginPage } from "@/pages/login";
 import { AdminLogPage } from "@/pages/admin-log";
+import { ensurePushSubscription, unregisterPushSubscription } from "@/lib/push-notifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +36,21 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return <Redirect to="/login" />;
   }
   return <>{children}</>;
+}
+
+function NotificationManager() {
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    if (user) {
+      ensurePushSubscription(user).catch(() => undefined);
+      return;
+    }
+
+    unregisterPushSubscription().catch(() => undefined);
+  }, [user]);
+
+  return null;
 }
 
 function Router() {
@@ -80,6 +97,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          <NotificationManager />
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
           </WouterRouter>

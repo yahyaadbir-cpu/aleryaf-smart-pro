@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { InvoicePrintDocument } from "@/components/invoice-print-document";
 import { getInvoicePrintDocumentTitle, type PrintInvoiceData } from "@/lib/print-invoice";
 import { useGetInvoice } from "@workspace/api-client-react";
+import { markInvoicePrinted } from "@/lib/push-notifications";
+import { useAuth } from "@/context/auth";
 
 interface InvoicePrintPageProps {
   invoiceId: number;
@@ -13,6 +15,8 @@ interface InvoicePrintPageProps {
 export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   const [, setLocation] = useLocation();
   const hasTriggeredPrintRef = useRef(false);
+  const hasMarkedPrintedRef = useRef(false);
+  const { user } = useAuth();
   const { data: invoice, isLoading } = useGetInvoice(invoiceId, {
     query: {
       refetchOnMount: "always",
@@ -40,6 +44,10 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
 
     hasTriggeredPrintRef.current = true;
     const timer = window.setTimeout(() => {
+      if (!hasMarkedPrintedRef.current) {
+        hasMarkedPrintedRef.current = true;
+        markInvoicePrinted(invoiceId, user?.username).catch(() => undefined);
+      }
       window.focus();
       window.print();
     }, 250);
@@ -50,6 +58,10 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   }, [invoice, shouldAutoPrint]);
 
   const handleManualPrint = () => {
+    if (!hasMarkedPrintedRef.current) {
+      hasMarkedPrintedRef.current = true;
+      markInvoicePrinted(invoiceId, user?.username).catch(() => undefined);
+    }
     window.focus();
     window.print();
   };
