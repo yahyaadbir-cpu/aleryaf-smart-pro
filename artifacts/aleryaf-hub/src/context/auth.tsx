@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiFetch } from "@/lib/http";
 
 interface AuthUser {
+  id: number;
   username: string;
   isAdmin: boolean;
   canUseTurkishInvoices: boolean;
@@ -18,6 +18,7 @@ interface AuthContextType {
   user: AuthUser | null;
   ready: boolean;
   login: (username: string, password: string) => Promise<LoginResult>;
+  redeemInvite: (token: string, username: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -25,9 +26,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 async function fetchCurrentUser() {
-  const response = await fetch(`${BASE}/api/auth/me`, {
-    credentials: "same-origin",
-  });
+  await apiFetch("/api/auth/csrf");
+  const response = await apiFetch("/api/auth/me");
 
   if (!response.ok) {
     return null;
@@ -61,10 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     ready,
     login: async (username: string, password: string) => {
-      const response = await fetch(`${BASE}/api/auth/login`, {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
@@ -80,11 +79,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       return { ok: true, user: data.user };
     },
+    redeemInvite: async (token: string, username: string, password: string) => {
+      const response = await apiFetch("/api/auth/invites/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token.trim(),
+          username: username.trim(),
+          password: password.trim(),
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
+
+      if (!response.ok || !data.user) {
+        return { ok: false, error: data.error || "تعذر استخدام الدعوة" };
+      }
+
+      setUser(data.user);
+      return { ok: true, user: data.user };
+    },
     logout: async () => {
       try {
-        await fetch(`${BASE}/api/auth/logout`, {
+        await apiFetch("/api/auth/logout", {
           method: "POST",
-          credentials: "same-origin",
         });
       } finally {
         setUser(null);

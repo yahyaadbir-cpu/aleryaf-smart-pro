@@ -1,6 +1,7 @@
 import React from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setCsrfTokenGetter } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/auth";
@@ -21,6 +22,7 @@ import { AdminControlPage } from "@/pages/admin-control";
 import { AdminUsersPage } from "@/pages/admin-users";
 import { AdminHandbookPage } from "@/pages/admin-handbook";
 import { syncExistingPushSubscription, unregisterPushSubscription } from "@/lib/push-notifications";
+import { getCsrfToken } from "@/lib/http";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +33,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+setCsrfTokenGetter(() => getCsrfToken());
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
@@ -112,13 +116,13 @@ function Router() {
         {() => <AuthGuard><BranchesPage /></AuthGuard>}
       </Route>
       <Route path="/admin-log">
-        {() => <AuthGuard><AdminLogPage /></AuthGuard>}
+        {() => <AdminGuard><AdminLogPage /></AdminGuard>}
       </Route>
       <Route path="/admin-control">
-        {() => <AuthGuard><AdminControlPage /></AuthGuard>}
+        {() => <AdminGuard><AdminControlPage /></AdminGuard>}
       </Route>
       <Route path="/admin-users">
-        {() => <AuthGuard><AdminUsersPage /></AuthGuard>}
+        {() => <AdminGuard><AdminUsersPage /></AdminGuard>}
       </Route>
       <Route path="/admin-handbook">
         {() => <AdminGuard><AdminHandbookPage /></AdminGuard>}

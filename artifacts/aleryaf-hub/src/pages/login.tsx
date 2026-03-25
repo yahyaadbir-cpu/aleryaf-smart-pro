@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
+import { LockKeyhole, ShieldCheck, Ticket, UserRound } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { APP_NAME_AR, APP_NAME_EN, APP_TAGLINE_AR } from "@/lib/branding";
 import { ensurePushSubscription } from "@/lib/push-notifications";
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, redeemInvite } = useAuth();
   const [, navigate] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "invite">("login");
 
   useEffect(() => {
     if (user) {
@@ -24,7 +26,10 @@ export function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await login(username, password);
+    const result =
+      mode === "login"
+        ? await login(username, password)
+        : await redeemInvite(inviteToken, username, password);
 
     if (result.ok) {
       try {
@@ -33,7 +38,6 @@ export function LoginPage() {
           isAdmin: Boolean(result.user?.isAdmin),
         });
       } catch {
-        // Keep login successful even if notifications are skipped or blocked.
       }
 
       navigate("/");
@@ -41,7 +45,7 @@ export function LoginPage() {
       return;
     }
 
-    setError(result.error || "خطأ في تسجيل الدخول");
+    setError(result.error || "خطأ في التحقق");
     setLoading(false);
   };
 
@@ -66,12 +70,48 @@ export function LoginPage() {
                     {APP_NAME_AR}
                   </h1>
 
-                  <p className="mt-2 text-sm tracking-[0.32em] text-slate-500 uppercase">
+                  <p className="mt-2 text-sm uppercase tracking-[0.32em] text-slate-500">
                     {APP_NAME_EN}
                   </p>
                 </div>
 
+                <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/20 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode("login")}
+                    className={`rounded-xl px-3 py-2 text-sm font-bold transition ${mode === "login" ? "bg-primary text-white" : "text-slate-300"}`}
+                  >
+                    دخول
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("invite")}
+                    className={`rounded-xl px-3 py-2 text-sm font-bold transition ${mode === "invite" ? "bg-primary text-white" : "text-slate-300"}`}
+                  >
+                    دعوة
+                  </button>
+                </div>
+
                 <div className="space-y-5">
+                  {mode === "invite" ? (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-300">
+                        رمز الدعوة
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={inviteToken}
+                          onChange={(e) => setInviteToken(e.target.value)}
+                          placeholder="ألصق رمز الدعوة"
+                          className="h-12 w-full rounded-xl border border-white/10 bg-[rgba(9,11,16,0.94)] px-4 pl-12 text-base text-foreground placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/60"
+                        />
+                        <Ticket className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-slate-300">
                       اسم المستخدم
@@ -82,7 +122,7 @@ export function LoginPage() {
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="اكتب أي اسم مستخدم"
+                        placeholder="اكتب اسم المستخدم"
                         autoComplete="username"
                         className="h-12 w-full rounded-xl border border-white/10 bg-[rgba(9,11,16,0.94)] px-4 pl-12 text-base text-foreground placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/60"
                       />
@@ -100,8 +140,8 @@ export function LoginPage() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="ادخل كلمة المرور"
-                        autoComplete="current-password"
+                        placeholder="أدخل كلمة المرور"
+                        autoComplete={mode === "login" ? "current-password" : "new-password"}
                         className="h-12 w-full rounded-xl border border-white/10 bg-[rgba(9,11,16,0.94)] px-4 pl-12 text-base text-foreground placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/60"
                       />
                       <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
@@ -120,7 +160,7 @@ export function LoginPage() {
                   disabled={loading}
                   className="mt-6 h-12 w-full rounded-xl bg-[linear-gradient(180deg,#4f8cff,#3a76e3)] text-lg font-extrabold text-white shadow-[0_18px_40px_rgba(58,118,227,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? "جارٍ تسجيل الدخول..." : "دخول النظام"}
+                  {loading ? "جارٍ التحقق..." : mode === "login" ? "دخول النظام" : "إنشاء الحساب من الدعوة"}
                 </button>
               </div>
             </form>
@@ -143,27 +183,7 @@ export function LoginPage() {
                   </p>
 
                   <p className="mt-6 max-w-xl text-lg leading-9 text-slate-400">
-                    دخول موحد للفريق مع صلاحيات مختلفة للإدارة والموظفين، وإدارة كاملة للحسابات من داخل النظام.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-2">
-                <div className="rounded-[1.4rem] border border-white/8 bg-[rgba(10,12,18,0.56)] p-5">
-                  <p className="text-2xl font-extrabold text-foreground">
-                    دخول الموظفين
-                  </p>
-                  <p className="mt-4 text-sm leading-7 text-slate-400">
-                    حسابات المستخدمين تُدار من داخل النظام مع كلمات مرور وصلاحيات مخصصة.
-                  </p>
-                </div>
-
-                <div className="rounded-[1.4rem] border border-white/8 bg-[rgba(10,12,18,0.56)] p-5">
-                  <p className="text-2xl font-extrabold text-foreground">
-                    دخول الإدارة
-                  </p>
-                  <p className="mt-4 text-sm leading-7 text-slate-400">
-                    صلاحيات الإدارة تتيح المتابعة والتحكم الكامل من لوحة مخصصة وآمنة.
+                    دخول موحد للفريق مع جلسات محمية، وصلاحيات مضبوطة، ودعوات إدارية مؤقتة لإنشاء الحسابات الجديدة.
                   </p>
                 </div>
               </div>

@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
+import { appEnv } from "./env";
 
 function buildAllowedOrigins() {
   return new Set(
     [
-      process.env.APP_ORIGIN,
-      process.env.PUBLIC_APP_ORIGIN,
+      ...appEnv.allowedAppOrigins,
       "https://aleryaf.store",
       "http://localhost:5173",
       "http://localhost:5174",
@@ -27,7 +27,12 @@ export function corsOriginValidator(
   origin: string | undefined,
   callback: (err: Error | null, allow?: boolean) => void,
 ) {
-  if (!origin || isAllowedOrigin(origin)) {
+  if (!origin) {
+    callback(null, !appEnv.isProduction);
+    return;
+  }
+
+  if (isAllowedOrigin(origin)) {
     callback(null, true);
     return;
   }

@@ -1,14 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { appEnv } from "./lib/env";
 
-const rawPort = process.env["PORT"] ?? "3000";
 const host = "0.0.0.0";
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const port = appEnv.PORT;
 
 app.listen(port, host, (err) => {
   if (err) {

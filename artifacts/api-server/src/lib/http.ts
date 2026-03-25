@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { appEnv } from "./env";
 
 type ErrorWithIssues = {
   issues?: Array<{
@@ -101,15 +102,19 @@ export function sendRouteError(
               : fallbackMessage;
 
     req.log.error({ err: error }, "Database request failed");
-    res.status(status).json({
-      error: message,
-      details: {
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint,
-        column: error.column,
-      },
-    });
+    res.status(status).json(
+      appEnv.isProduction
+        ? { error: message }
+        : {
+            error: message,
+            details: {
+              code: error.code,
+              detail: error.detail,
+              constraint: error.constraint,
+              column: error.column,
+            },
+          },
+    );
     return;
   }
 

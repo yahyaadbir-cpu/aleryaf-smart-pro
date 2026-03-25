@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 interface LogEntry {
   id: number;
   username: string;
@@ -122,7 +120,7 @@ export function AdminLogPage() {
   const { data, isLoading } = useQuery<LogEntry[]>({
     queryKey: ["activity-log"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/api/activity-log`);
+      const res = await apiFetch("/api/activity-log");
       if (!res.ok) throw new Error("فشل في جلب السجل");
       return res.json();
     },
@@ -240,3 +238,4 @@ export function AdminLogPage() {
     </Layout>
   );
 }
+import { apiFetch, BASE } from "@/lib/http";

@@ -7,6 +7,7 @@ import {
   pushSubscriptionsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
+import { appEnv } from "./env";
 
 type NotificationAudience = "all" | "admin";
 
@@ -30,21 +31,13 @@ type PushSubscriptionInput = {
   userAgent?: string | null;
 };
 
-const vapidKeys = (() => {
-  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    return {
-      publicKey: process.env.VAPID_PUBLIC_KEY,
-      privateKey: process.env.VAPID_PRIVATE_KEY,
-    };
-  }
-
-  const generated = webpush.generateVAPIDKeys();
-  logger.warn("VAPID keys are missing; generated temporary keys for this runtime only");
-  return generated;
-})();
+const vapidKeys = {
+  publicKey: appEnv.VAPID_PUBLIC_KEY,
+  privateKey: appEnv.VAPID_PRIVATE_KEY,
+};
 
 webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || "mailto:alerts@aleryaf.store",
+  appEnv.VAPID_SUBJECT,
   vapidKeys.publicKey,
   vapidKeys.privateKey,
 );

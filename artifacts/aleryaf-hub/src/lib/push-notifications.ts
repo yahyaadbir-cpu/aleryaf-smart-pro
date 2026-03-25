@@ -1,4 +1,4 @@
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiFetch, BASE } from "@/lib/http";
 
 type AuthUser = {
   username: string;
@@ -107,7 +107,7 @@ export async function syncExistingPushSubscription(user: AuthUser) {
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return false;
 
-  const response = await fetch(`${BASE}/api/notifications/subscriptions`, {
+  const response = await apiFetch("/api/notifications/subscriptions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -122,7 +122,7 @@ export async function syncExistingPushSubscription(user: AuthUser) {
 }
 
 async function getPushPublicKey() {
-  const response = await fetch(`${BASE}/api/notifications/public-key`);
+  const response = await apiFetch("/api/notifications/public-key");
   if (!response.ok) {
     throw new Error("Failed to load push public key");
   }
@@ -165,7 +165,7 @@ export async function ensurePushSubscription(user: AuthUser) {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     }));
 
-  const response = await fetch(`${BASE}/api/notifications/subscriptions`, {
+  const response = await apiFetch("/api/notifications/subscriptions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -194,7 +194,7 @@ export async function unregisterPushSubscription() {
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return;
 
-  await fetch(`${BASE}/api/notifications/subscriptions/unregister`, {
+  await apiFetch("/api/notifications/subscriptions/unregister", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ endpoint: subscription.endpoint }),
@@ -204,7 +204,7 @@ export async function unregisterPushSubscription() {
 }
 
 export async function markInvoicePrinted(invoiceId: number, username?: string) {
-  await fetch(`${BASE}/api/notifications/invoices/${invoiceId}/printed`, {
+  await apiFetch(`/api/notifications/invoices/${invoiceId}/printed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username }),

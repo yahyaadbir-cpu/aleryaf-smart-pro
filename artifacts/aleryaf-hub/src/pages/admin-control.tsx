@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth";
 import { logActivity } from "@/lib/activity";
-
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiFetch } from "@/lib/http";
 const DEFAULT_NOTIFICATION_TITLE = "ALERYAF";
 const DEFAULT_NOTIFICATION_URL = "/";
 
@@ -119,9 +118,7 @@ export function AdminControlPage() {
   useEffect(() => {
     if (!user?.isAdmin) return;
 
-    fetch(`${BASE}/api/users`, {
-      credentials: "same-origin",
-    })
+    apiFetch("/api/users")
       .then((response) => (response.ok ? response.json() : []))
       .then((data) => setManagedUsers(Array.isArray(data) ? data : []))
       .catch(() => setManagedUsers([]));
@@ -210,7 +207,7 @@ export function AdminControlPage() {
       const parsed = parseCommand(trimmed);
 
       if (parsed.kind === "notify") {
-        const response = await fetch(`${BASE}/api/notifications/broadcast`, {
+        const response = await apiFetch("/api/notifications/broadcast", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(parsed),
@@ -247,10 +244,9 @@ export function AdminControlPage() {
           throw new Error("المستخدم غير موجود");
         }
 
-        const response = await fetch(`${BASE}/api/users/${targetUser.id}/turkish-invoices`, {
+        const response = await apiFetch(`/api/users/${targetUser.id}/turkish-invoices`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify({ canUseTurkishInvoices: parsed.enabled }),
         });
 

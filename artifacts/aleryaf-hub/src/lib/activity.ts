@@ -1,8 +1,8 @@
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiFetch } from "@/lib/http";
 
 export async function logActivity(username: string, action: string, details?: string) {
   try {
-    await fetch(`${BASE}/api/activity-log`, {
+    await apiFetch("/api/activity-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, action, details }),
