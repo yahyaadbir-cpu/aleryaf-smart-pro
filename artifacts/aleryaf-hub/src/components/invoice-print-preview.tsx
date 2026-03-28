@@ -50,10 +50,7 @@ export function InvoicePrintPreview({
 
   const handlePrint = () => {
     if (finalPrintHref) {
-      const openedWindow = window.open(finalPrintHref, "_blank", "noopener,noreferrer");
-      if (!openedWindow) {
-        window.location.assign(finalPrintHref);
-      }
+      window.location.assign(finalPrintHref);
       return;
     }
 

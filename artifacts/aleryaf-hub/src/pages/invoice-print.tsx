@@ -3,7 +3,12 @@ import { ArrowRight, Printer } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { InvoicePrintDocument } from "@/components/invoice-print-document";
-import { getInvoicePrintDocumentTitle, type InvoicePrintLanguage, type PrintInvoiceData } from "@/lib/print-invoice";
+import {
+  DX_PRINT_STORAGE_KEY,
+  getInvoicePrintDocumentTitle,
+  type InvoicePrintLanguage,
+  type PrintInvoiceData,
+} from "@/lib/print-invoice";
 import { useGetInvoice } from "@workspace/api-client-react";
 import { markInvoicePrinted } from "@/lib/push-notifications";
 import { useAuth } from "@/context/auth";
@@ -17,6 +22,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   const hasTriggeredPrintRef = useRef(false);
   const hasMarkedPrintedRef = useRef(false);
   const { user } = useAuth();
+  const [overrideInvoice, setOverrideInvoice] = useState<PrintInvoiceData | null>(null);
   const { data: invoice, isLoading } = useGetInvoice(invoiceId, {
     query: {
       refetchOnMount: "always",
@@ -38,6 +44,29 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
     return new URLSearchParams(window.location.search).get("autoprint") === "1";
   }, []);
 
+  const isDxPrint = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("dx") === "1";
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isDxPrint) return;
+
+    try {
+      const raw = window.sessionStorage.getItem(DX_PRINT_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as { invoiceId?: number; invoice?: PrintInvoiceData };
+      if (parsed.invoiceId === invoiceId && parsed.invoice) {
+        setOverrideInvoice(parsed.invoice);
+      }
+    } catch {
+      setOverrideInvoice(null);
+    }
+  }, [invoiceId, isDxPrint]);
+
+  const printableInvoice = overrideInvoice ?? ((invoice as PrintInvoiceData | undefined) ?? null);
+
   useEffect(() => {
     if (!user?.canUseTurkishInvoices && language !== "ar") {
       setLanguage("ar");
@@ -53,15 +82,15 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   }, []);
 
   useEffect(() => {
-    if (!invoice) return;
+    if (!printableInvoice) return;
 
     const previousTitle = document.title;
-    document.title = getInvoicePrintDocumentTitle(invoice as PrintInvoiceData, effectiveLanguage);
+    document.title = getInvoicePrintDocumentTitle(printableInvoice, effectiveLanguage);
 
     return () => {
       document.title = previousTitle;
     };
-  }, [effectiveLanguage, invoice]);
+  }, [effectiveLanguage, printableInvoice]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -71,11 +100,11 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   }, [effectiveLanguage]);
 
   useEffect(() => {
-    if (!invoice || hasTriggeredPrintRef.current || !shouldAutoPrint) return;
+    if (!printableInvoice || hasTriggeredPrintRef.current || !shouldAutoPrint) return;
 
     hasTriggeredPrintRef.current = true;
     const timer = window.setTimeout(() => {
-      if (!hasMarkedPrintedRef.current) {
+      if (!hasMarkedPrintedRef.current && !isDxPrint) {
         hasMarkedPrintedRef.current = true;
         markInvoicePrinted(invoiceId, user?.username).catch(() => undefined);
       }
@@ -86,10 +115,10 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [invoice, invoiceId, shouldAutoPrint, user?.username]);
+  }, [printableInvoice, invoiceId, isDxPrint, shouldAutoPrint, user?.username]);
 
   const handleManualPrint = () => {
-    if (!hasMarkedPrintedRef.current) {
+    if (!hasMarkedPrintedRef.current && !isDxPrint) {
       hasMarkedPrintedRef.current = true;
       markInvoicePrinted(invoiceId, user?.username).catch(() => undefined);
     }
@@ -97,7 +126,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
     window.print();
   };
 
-  if (isLoading) {
+  if (isLoading && !overrideInvoice) {
     return (
       <div className="invoice-print-page">
         <div className="invoice-print-page__status">جاري تحميل معاينة الطباعة...</div>
@@ -105,7 +134,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
     );
   }
 
-  if (!invoice) {
+  if (!printableInvoice) {
     return (
       <div className="invoice-print-page">
         <div className="invoice-print-page__status">الفاتورة غير موجودة</div>
@@ -118,7 +147,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
       <div className="invoice-print-page__toolbar screen-only">
         <div className="min-w-0">
           <p className="font-display text-lg font-bold text-white">معاينة طباعة الفاتورة</p>
-          <p className="mt-1 text-xs text-slate-400">{invoice.invoiceNumber}</p>
+          <p className="mt-1 text-xs text-slate-400">{printableInvoice.invoiceNumber}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {user?.canUseTurkishInvoices ? (
@@ -153,7 +182,7 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
 
       <div className="invoice-print-stage">
         <div className="invoice-print-sheet invoice-print-sheet--page">
-          <InvoicePrintDocument invoice={invoice as PrintInvoiceData} language={effectiveLanguage} />
+          <InvoicePrintDocument invoice={printableInvoice} language={effectiveLanguage} />
         </div>
       </div>
     </div>

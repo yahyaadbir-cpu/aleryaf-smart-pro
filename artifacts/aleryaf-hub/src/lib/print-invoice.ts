@@ -2,6 +2,7 @@ import { summarizeInvoiceLines, type InvoiceKind } from "./invoice-math";
 
 export type InvoicePrintLanguage = "ar" | "tr";
 export type PurchaseInvoiceType = "local_syria" | "local_turkey" | "import";
+export const DX_PRINT_STORAGE_KEY = "aleryaf_dx_print_invoice";
 
 export interface PrintInvoiceData {
   invoiceNumber: string;

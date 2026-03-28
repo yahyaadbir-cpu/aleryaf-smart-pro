@@ -9,11 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { InvoicePrintPreview } from "@/components/invoice-print-preview";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getInvoiceLineTotals, summarizeInvoiceLines } from "@/lib/invoice-math";
-import { getInvoicePrintDocumentTitle, type PrintInvoiceData } from "@/lib/print-invoice";
-import { AlertTriangle, ArrowRight, Plus, Printer, RotateCcw, Trash2 } from "lucide-react";
+import { DX_PRINT_STORAGE_KEY, type PrintInvoiceData } from "@/lib/print-invoice";
+import { AlertTriangle, ArrowRight, Plus, Printer, Trash2 } from "lucide-react";
 
 interface InvoiceDxPageProps {
   invoiceId: number;
@@ -87,14 +86,11 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
   });
   const { data: branches } = useGetBranches();
 
-  const [initialSnapshot, setInitialSnapshot] = useState<DxInvoiceState | null>(null);
   const [dxState, setDxState] = useState<DxInvoiceState | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!invoice) return;
     const nextState = buildDxState(invoice);
-    setInitialSnapshot(nextState);
     setDxState({
       ...nextState,
       items: nextState.items.map((item) => ({ ...item })),
@@ -138,16 +134,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
     });
   };
 
-  const resetToOriginal = () => {
-    if (initialSnapshot) {
-      setDxState({
-        ...initialSnapshot,
-        items: initialSnapshot.items.map((item) => ({ ...item, key: nextDxKey() })),
-      });
-    }
-  };
-
-  const previewInvoice: PrintInvoiceData | null = dxState
+  const printableInvoice: PrintInvoiceData | null = dxState
     ? {
         invoiceNumber: dxState.invoiceNumber,
         invoiceDate: dxState.invoiceDate,
@@ -176,20 +163,18 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
     : null;
 
   const handlePrint = () => {
-    if (!previewInvoice) return;
-    setIsPreviewOpen(true);
+    if (!printableInvoice) return;
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(
+        DX_PRINT_STORAGE_KEY,
+        JSON.stringify({
+          invoiceId,
+          invoice: printableInvoice,
+        }),
+      );
+    }
+    setLocation(`/invoices/${invoiceId}/print?autoprint=1&dx=1`);
   };
-
-  useEffect(() => {
-    if (!isPreviewOpen || !previewInvoice) return;
-
-    const previousTitle = document.title;
-    document.title = getInvoicePrintDocumentTitle(previewInvoice);
-
-    return () => {
-      document.title = previousTitle;
-    };
-  }, [isPreviewOpen, previewInvoice]);
 
   if (isLoading) {
     return (
@@ -237,37 +222,26 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-4 sm:gap-6 max-w-7xl">
+      <div className="flex max-w-7xl flex-col gap-4 sm:gap-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <Button variant="ghost" size="icon" onClick={() => setLocation("/invoices")} className="text-muted-foreground hover:text-white">
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="h-5 w-5" />
             </Button>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">فاتورة DX</h1>
-                <Badge className="bg-primary/15 text-primary border border-primary/20">DX - وضع معاينة قابل للتعديل</Badge>
+                <h1 className="text-2xl font-display font-bold text-foreground sm:text-3xl">فاتورة DX</h1>
+                <Badge className="border border-primary/20 bg-primary/15 text-primary">DX - وضع معاينة قابل للتعديل</Badge>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-1 text-sm text-muted-foreground">
                 هذه الصفحة تعمل على نسخة مؤقتة من الفاتورة. أي تعديل هنا لا يتم حفظه في قاعدة البيانات.
               </p>
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={resetToOriginal} className="border-white/10">
-              <RotateCcw className="w-4 h-4 ml-2" />
-              استعادة الأصل
-            </Button>
-            <Button onClick={handlePrint} className="bg-primary text-white">
-              <Printer className="w-4 h-4 ml-2" />
-              طباعة / PDF
-            </Button>
-          </div>
         </div>
 
-        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200 flex gap-2">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>وضع DX مخصص للتعديل المؤقت والطباعة فقط. لا يوجد حفظ، ولا يتم تحديث الفاتورة الأصلية.</span>
         </div>
 
@@ -276,28 +250,28 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
             <CardTitle className="font-display text-base">بيانات الفاتورة</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">رقم الفاتورة</label>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">رقم الفاتورة</label>
                 <Input
                   value={dxState.invoiceNumber}
                   onChange={(e) => updateHeader("invoiceNumber", e.target.value)}
-                  className="bg-black/30 border-white/10"
+                  className="border-white/10 bg-black/30"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">التاريخ</label>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">التاريخ</label>
                 <Input
                   type="date"
                   value={dxState.invoiceDate}
                   onChange={(e) => updateHeader("invoiceDate", e.target.value)}
-                  className="bg-black/30 border-white/10"
+                  className="border-white/10 bg-black/30"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">الفرع</label>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">الفرع</label>
                 <Select value={dxState.branchId} onValueChange={(value) => updateHeader("branchId", value)}>
-                  <SelectTrigger className="bg-black/30 border-white/10">
+                  <SelectTrigger className="border-white/10 bg-black/30">
                     <SelectValue placeholder="اختر الفرع" />
                   </SelectTrigger>
                   <SelectContent>
@@ -310,8 +284,8 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">العملة</label>
-                <div className="flex bg-black/30 rounded-lg p-1 border border-white/10 h-9">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">العملة</label>
+                <div className="flex h-9 rounded-lg border border-white/10 bg-black/30 p-1">
                   <button
                     type="button"
                     onClick={() => updateHeader("currency", "USD")}
@@ -331,51 +305,50 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
             </div>
 
             <div className="mt-4">
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">اسم العميل / الزبون</label>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">اسم العميل / الزبون</label>
               <Input
                 value={dxState.customerName}
                 onChange={(e) => updateHeader("customerName", e.target.value)}
-                className="bg-black/30 border-white/10"
+                className="border-white/10 bg-black/30"
               />
             </div>
 
             <div className="mt-4">
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">ملاحظات</label>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">ملاحظات</label>
               <Textarea
                 value={dxState.notes}
                 onChange={(e) => updateHeader("notes", e.target.value)}
                 rows={2}
-                className="bg-black/30 border-white/10 resize-none"
+                className="resize-none border-white/10 bg-black/30"
               />
             </div>
           </CardContent>
         </Card>
 
         <Card className="glass-panel">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="font-display text-base">بنود الفاتورة DX</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">القيم هنا قابلة للتعديل محليًا فقط، مع إعادة الحساب مباشرة قبل الطباعة.</p>
+              <p className="mt-1 text-xs text-muted-foreground">القيم هنا قابلة للتعديل محلياً فقط، مع إعادة الحساب مباشرة قبل الطباعة.</p>
             </div>
-            <Button size="sm" onClick={addLine} className="bg-primary/20 text-primary hover:bg-primary/30 h-8">
-              <Plus className="w-3.5 h-3.5 ml-1" />
+            <Button size="sm" onClick={addLine} className="h-8 bg-primary/20 text-primary hover:bg-primary/30">
+              <Plus className="ml-1 h-3.5 w-3.5" />
               إضافة بند
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-white/10 overflow-hidden">
+            <div className="overflow-hidden rounded-lg border border-white/10">
               <Table>
                 <TableHeader className="bg-white/5">
                   <TableRow className="border-white/10">
                     <TableHead className="text-right">الصنف</TableHead>
                     <TableHead className="text-right">عدد</TableHead>
                     <TableHead className="text-right">الكمية (كغ)</TableHead>
-                    <TableHead className="text-right">التكلفة/كغ</TableHead>
                     <TableHead className="text-right">سعر البيع/طن</TableHead>
                     <TableHead className="text-right">سعر البيع/كغ</TableHead>
                     <TableHead className="text-right">الإجمالي</TableHead>
                     <TableHead className="text-right">الربح</TableHead>
-                    <TableHead className="text-left w-16">إجراء</TableHead>
+                    <TableHead className="w-16 text-left">إجراء</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,7 +361,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                           <Input
                             value={line.rawName}
                             onChange={(e) => updateLine(line.key, "rawName", e.target.value)}
-                            className="bg-black/30 border-white/10"
+                            className="border-white/10 bg-black/30"
                           />
                         </TableCell>
                         <TableCell className="min-w-[90px]">
@@ -398,7 +371,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                             step={1}
                             value={line.count}
                             onChange={(e) => updateLine(line.key, "count", e.target.value === "" ? "" : parseInt(e.target.value, 10))}
-                            className="bg-black/30 border-white/10"
+                            className="border-white/10 bg-black/30"
                             dir="ltr"
                           />
                         </TableCell>
@@ -409,18 +382,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                             step="0.01"
                             value={line.quantity}
                             onChange={(e) => updateLine(line.key, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                            className="bg-black/30 border-white/10"
-                            dir="ltr"
-                          />
-                        </TableCell>
-                        <TableCell className="min-w-[110px]">
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.0001"
-                            value={line.unitCost}
-                            onChange={(e) => updateLine(line.key, "unitCost", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                            className="bg-black/30 border-white/10"
+                            className="border-white/10 bg-black/30"
                             dir="ltr"
                           />
                         </TableCell>
@@ -431,7 +393,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                             step="0.01"
                             value={line.unitPrice}
                             onChange={(e) => updateLine(line.key, "unitPrice", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                            className="bg-black/30 border-white/10"
+                            className="border-white/10 bg-black/30"
                             dir="ltr"
                           />
                         </TableCell>
@@ -450,9 +412,9 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                             size="icon"
                             onClick={() => removeLine(line.key)}
                             disabled={dxState.items.length <= 1}
-                            className="h-8 w-8 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10"
+                            className="h-8 w-8 text-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -466,21 +428,21 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
 
         <Card className="glass-panel border-primary/20">
           <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">عدد البنود</p>
+                <p className="mb-1 text-xs text-muted-foreground">عدد البنود</p>
                 <p className="text-lg font-bold">{dxState.items.length}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">إجمالي المبيعات</p>
+                <p className="mb-1 text-xs text-muted-foreground">إجمالي المبيعات</p>
                 <p className="text-lg font-bold text-blue-400">{formatCurrency(summary.revenue, dxState.currency)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">إجمالي التكلفة</p>
+                <p className="mb-1 text-xs text-muted-foreground">إجمالي التكلفة</p>
                 <p className="text-lg font-bold text-rose-400">{formatCurrency(summary.totalCost, dxState.currency)}</p>
               </div>
-              <div className="bg-emerald-500/10 -m-2 p-2 sm:-m-3 sm:p-3 rounded-lg">
-                <p className="text-xs text-emerald-400 mb-1">صافي الربح</p>
+              <div className="-m-2 rounded-lg bg-emerald-500/10 p-2 sm:-m-3 sm:p-3">
+                <p className="mb-1 text-xs text-emerald-400">صافي الربح</p>
                 <p className={`text-xl font-bold ${summary.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {formatCurrency(summary.profit, dxState.currency)}
                 </p>
@@ -490,7 +452,7 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
         </Card>
 
         <Card className="glass-panel">
-          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">الأصل:</span>{" "}
               {invoice.invoiceNumber} - {formatDate(invoice.invoiceDate)} - {invoice.branchName}
@@ -500,23 +462,13 @@ export function InvoiceDxPage({ invoiceId }: InvoiceDxPageProps) {
                 العودة للفواتير
               </Button>
               <Button onClick={handlePrint} className="bg-primary text-white">
-                <Printer className="w-4 h-4 ml-2" />
+                <Printer className="ml-2 h-4 w-4" />
                 طباعة النسخة الحالية
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <InvoicePrintPreview
-        invoice={previewInvoice}
-        open={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        onBackToInvoices={() => {
-          setIsPreviewOpen(false);
-          setLocation("/invoices");
-        }}
-      />
     </Layout>
   );
 }
