@@ -196,7 +196,7 @@ export function SmartReportsPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-5" dir="rtl">
+      <div className="company-report-page executive-report flex flex-col gap-5" dir="rtl">
         <Card className="screen-only glass-panel border-white/10">
           <CardContent className="flex flex-col gap-4 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -227,7 +227,7 @@ export function SmartReportsPage() {
           </CardContent>
         </Card>
 
-        <section className="rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_22%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_18%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.92))] p-5 shadow-[0_32px_80px_rgba(2,6,23,0.45)] sm:p-8">
+        <section className="executive-sheet rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_22%),radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_18%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.92))] p-5 shadow-[0_32px_80px_rgba(2,6,23,0.45)] sm:p-8">
           <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
@@ -258,15 +258,18 @@ export function SmartReportsPage() {
           </div>
         </section>
 
+        <section className="executive-sheet">
         <div className="grid gap-4 lg:grid-cols-2">
           <TextPanel title="الملخص" icon={<Sparkles className="h-5 w-5 text-primary" />} items={summary} />
           <TextPanel title="نظرة سريعة" icon={<Crown className="h-5 w-5 text-emerald-300" />} items={letter} />
         </div>
+        </section>
 
         {analysis.suspicious.length > 0 && (
           <Card className="glass-panel border-amber-400/20 bg-amber-500/8"><CardContent className="flex gap-3 p-5"><div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-3"><ShieldAlert className="h-5 w-5 text-amber-300" /></div><div className="space-y-2"><h3 className="font-display text-xl text-amber-100">ملاحظة رقابية قبل الاعتماد الكامل</h3>{analysis.suspicious.map((note) => <p key={note} className="text-sm leading-7 text-amber-50/90">{note}</p>)}</div></CardContent></Card>
         )}
 
+        <section className="executive-sheet">
         <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <Card className="glass-panel border-white/10">
             <CardHeader><CardTitle className="text-xl text-white">اتجاه الأداء خلال الفترة</CardTitle></CardHeader>
@@ -289,18 +292,24 @@ export function SmartReportsPage() {
             </CardContent>
           </Card>
         </div>
+        </section>
 
+        <section className="executive-sheet">
         <div className="grid gap-4 xl:grid-cols-3">
           <Spotlight icon={<Building2 className="h-5 w-5 text-blue-300" />} title="أفضل فرع" name={analysis.branches[0]?.branchName ?? "غير متاح"} meta={analysis.branches[0] ? `${analysis.branches[0].share.toFixed(1)}% من المبيعات` : "لا توجد بيانات"} value={analysis.branches[0] ? fmt(analysis.branches[0].salesAmount, analysis.currency) : "-"} />
           <Spotlight icon={<Users className="h-5 w-5 text-emerald-300" />} title="العميل الأهم" name={analysis.customers[0]?.customerName ?? "غير متاح"} meta={analysis.customers[0] ? `${formatNumber(analysis.customers[0].invoiceCount)} فواتير` : "لا توجد بيانات"} value={analysis.customers[0] ? fmt(analysis.customers[0].salesAmount, analysis.currency) : "-"} />
           <Spotlight icon={<PackageSearch className="h-5 w-5 text-amber-300" />} title="الصنف القائد" name={analysis.items[0]?.itemName ?? "غير متاح"} meta={analysis.items[0]?.category ?? "لا توجد بيانات"} value={analysis.items[0] ? fmt(analysis.items[0].revenueAmount, analysis.currency) : "-"} />
         </div>
+        </section>
 
+        <section className="executive-sheet">
         <div className="grid gap-4 xl:grid-cols-2">
           <DataTable title="الفروع" headers={["الفرع", "المبيعات", "الفواتير", "الحصة"]} rows={analysis.branches.slice(0, 5).map((b) => [b.branchName, fmt(b.salesAmount, analysis.currency), formatNumber(b.salesInvoiceCount), `${b.share.toFixed(1)}%`])} />
           <DataTable title="الأصناف الأعلى مساهمة" headers={["الصنف", "الفئة", "الإيراد", "الكمية"]} rows={analysis.items.slice(0, 5).map((i) => [i.itemName, i.category, fmt(i.revenueAmount, analysis.currency), formatNumber(i.quantitySold)])} />
         </div>
+        </section>
 
+        <section className="executive-sheet">
         <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <Card className="glass-panel border-white/10">
             <CardHeader><CardTitle className="text-xl text-white">المخزون والأولوية المباشرة</CardTitle></CardHeader>
@@ -311,8 +320,9 @@ export function SmartReportsPage() {
           </Card>
           <DataTable title="أحدث الفواتير المرجعية" headers={["الرقم", "النوع", "الجهة", "الفرع", "الإجمالي"]} rows={data.recentInvoices.slice(0, 5).map((i) => [i.invoiceNumber, i.invoiceType === "purchase" ? "شراء" : "بيع", i.customerName, i.branchName, formatCurrency(i.totalAmount, i.currency)])} />
         </div>
+        </section>
 
-        <section className="space-y-4">
+        <section className="executive-sheet space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-display text-2xl font-bold text-white">التقارير المستقلة داخل التقرير</h3>

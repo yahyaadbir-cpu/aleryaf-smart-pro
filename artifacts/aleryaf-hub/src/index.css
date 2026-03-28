@@ -1760,6 +1760,43 @@
     color: #475569 !important;
   }
 
+  .company-report-page {
+    display: block !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .company-report-page > *:not(.screen-only) {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .company-report-page .grid,
+  .company-report-page section,
+  .company-report-page .recharts-responsive-container {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .company-report-page .glass-panel,
+  .company-report-page .rounded-\[24px\],
+  .company-report-page .rounded-\[22px\],
+  .company-report-page table {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .company-report-page .recharts-wrapper,
+  .company-report-page .recharts-responsive-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .company-report-page .h-\[320px\] {
+    height: 220px !important;
+  }
+
   .executive-report {
     display: block !important;
     color: #0f172a !important;
