@@ -1,10 +1,28 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, BellRing, Printer, RefreshCcw } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BellRing,
+  BrainCircuit,
+  Building2,
+  CalendarRange,
+  Crown,
+  PackageSearch,
+  Printer,
+  RefreshCcw,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Layout } from "@/components/layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/context/auth";
@@ -415,6 +433,113 @@ export function ReportsPage() {
       unspecifiedItems,
     };
   }, [data]);
+
+  const briefing = useMemo(() => {
+    if (!data || !analysis) return null;
+
+    const branchLeader = analysis.rankedBranches[0];
+    const customerLeader = analysis.rankedCustomers[0];
+    const itemLeader = analysis.rankedItems[0];
+    const categoryLeader = [...data.categoryPerformance]
+      .map((category) => ({
+        category: category.category,
+        revenue: amountByCurrency(category.revenueUsd, category.revenueTry, analysis.currency),
+        profit: amountByCurrency(category.profitUsd, category.profitTry, analysis.currency),
+      }))
+      .sort((a, b) => b.revenue - a.revenue)[0];
+
+    const topCustomersRevenue = analysis.rankedCustomers.slice(0, 3).reduce((sum, customer) => sum + customer.salesAmount, 0);
+    const topItemsRevenue = analysis.rankedItems.slice(0, 3).reduce((sum, item) => sum + item.revenueAmount, 0);
+    const customerConcentration = analysis.totalSales > 0 ? (topCustomersRevenue / analysis.totalSales) * 100 : 0;
+    const itemConcentration = analysis.totalSales > 0 ? (topItemsRevenue / analysis.totalSales) * 100 : 0;
+    const branchConcentration = branchLeader?.share ?? 0;
+
+    const operationalRisk = analysis.suspiciousNotes.length > 0
+      ? "مرتفع"
+      : analysis.outOfStock.length > 0
+        ? "تشغيلي حرج"
+        : analysis.belowMinimum.length > 0
+          ? "متوسط"
+          : "منخفض";
+
+    const healthScore = Math.max(
+      28,
+      Math.min(
+        96,
+        Math.round(
+          55 +
+            Math.min(analysis.netMargin, 25) * 0.9 +
+            (analysis.outOfStock.length === 0 ? 10 : -10) +
+            (analysis.suspiciousNotes.length === 0 ? 8 : -18) +
+            (branchConcentration < 60 ? 8 : -6) +
+            (customerConcentration < 55 ? 7 : -7),
+        ),
+      ),
+    );
+
+    const posture = analysis.totalSales <= 0
+      ? "الفترة هادئة جدًا ولا تكفي للحكم على اتجاه تجاري مريح."
+      : analysis.netMargin >= 35
+        ? "الوضع المالي قوي جدًا، والشركة لا تبيع فقط بل تحتفظ بجودة ربحية ممتازة."
+        : analysis.netMargin >= 20
+          ? "الشركة في وضع جيد، لكن هناك مساحة واضحة لرفع جودة الربح والانضباط التشغيلي."
+          : "المبيعات موجودة لكن جودة الربح ليست بالمستوى الذي يطمئن الإدارة بالكامل.";
+
+    const ceoBullets = [
+      `أهم فرع حاليًا هو ${branchLeader ? branchLeader.branchName : "غير محدد"}${branchLeader ? ` بحصة ${branchLeader.share.toFixed(1)}% من المبيعات` : ""}.`,
+      customerLeader
+        ? `أكبر عميل هو ${customerLeader.customerName} بحجم ${formatExecutiveAmount(customerLeader.salesAmount, analysis.currency)}.`
+        : "لا يظهر عميل مهيمن بوضوح خلال هذه الفترة.",
+      itemLeader
+        ? `أكثر صنف تأثيرًا هو ${itemLeader.itemName} بإيراد ${formatExecutiveAmount(itemLeader.revenueAmount, analysis.currency)}.`
+        : "لا يوجد صنف قائد واضح خلال الفترة.",
+      categoryLeader
+        ? `الفئة الأقوى هي ${categoryLeader.category} وتستحق حماية في التسعير والتوريد.`
+        : "هيكل الفئات لا يعطي قائدًا واضحًا حتى الآن.",
+    ];
+
+    const managementLetter = [
+      `هذا التقرير يقرأ الشركة من زاوية القرار التنفيذي، لا من زاوية عرض الأرقام فقط. ${posture}`,
+      analysis.suspiciousNotes.length > 0
+        ? "قبل أي اعتماد كامل للأرقام، هناك مؤشرات تستدعي مراجعة منطق التكلفة أو الربحية حتى لا نبني قرارًا كبيرًا على قراءة مالية مضللة."
+        : analysis.outOfStock.length > 0
+          ? `الخطر التشغيلي الأقرب الآن هو المخزون؛ يوجد ${formatNumber(analysis.outOfStock.length)} صنف نافد بالكامل، وهذا قد يوقف البيع أسرع من أي مشكلة تسويقية.`
+          : "تشغيليًا، لا توجد إشارة حرجة تمنع الإدارة من التركيز على تحسين التوسع والجودة الربحية.",
+      branchConcentration >= 60
+        ? "الاعتماد على مركز أداء واحد لا يزال مرتفعًا؛ هذا جيد مؤقتًا لكنه ليس نموذجًا مريحًا للنمو طويل المدى."
+        : "توزيع المبيعات بين الفروع مقبول نسبيًا، وهذا يمنح الإدارة مرونة أفضل في التشغيل والتوسع.",
+    ];
+
+    const decisionCards = [
+      {
+        title: "الصورة العامة",
+        tone: analysis.netMargin >= 25 ? "good" : analysis.netMargin >= 15 ? "warn" : "risk",
+        text: posture,
+      },
+      {
+        title: "تركيز الإيراد",
+        tone: customerConcentration >= 55 || branchConcentration >= 60 ? "warn" : "good",
+        text: `تركيز العملاء ${customerConcentration.toFixed(1)}% وتركيز الفرع القائد ${branchConcentration.toFixed(1)}%.`,
+      },
+      {
+        title: "المخاطر التشغيلية",
+        tone: operationalRisk === "منخفض" ? "good" : operationalRisk === "متوسط" ? "warn" : "risk",
+        text: `تصنيف المخاطر الحالي: ${operationalRisk}.`,
+      },
+    ] as const;
+
+    return {
+      healthScore,
+      operationalRisk,
+      customerConcentration,
+      itemConcentration,
+      branchConcentration,
+      categoryLeader,
+      ceoBullets,
+      managementLetter,
+      decisionCards,
+    };
+  }, [analysis, data]);
 
   return (
     <Layout>

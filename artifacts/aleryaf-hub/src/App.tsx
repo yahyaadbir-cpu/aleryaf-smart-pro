@@ -10,7 +10,7 @@ import NotFound from "@/pages/not-found";
 import { Dashboard } from "@/pages/dashboard";
 import { BranchAnalytics } from "@/pages/branch-analytics";
 import { ProfitAnalysisPage } from "@/pages/profit";
-import { ReportsPage } from "@/pages/reports";
+import { SmartReportsPage } from "@/pages/reports-smart";
 import { InventoryPage } from "@/pages/inventory";
 import { ItemsPage } from "@/pages/items";
 import { InvoicesPage } from "@/pages/invoices";
@@ -99,7 +99,7 @@ function Router() {
         {() => <AuthGuard><ProfitAnalysisPage /></AuthGuard>}
       </Route>
       <Route path="/reports">
-        {() => <AuthGuard><ReportsPage /></AuthGuard>}
+        {() => <AuthGuard><SmartReportsPage /></AuthGuard>}
       </Route>
       <Route path="/inventory">
         {() => <AuthGuard><InventoryPage /></AuthGuard>}
