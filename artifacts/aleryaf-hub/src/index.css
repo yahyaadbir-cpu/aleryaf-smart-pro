@@ -429,6 +429,14 @@
   font-weight: 700;
 }
 
+.report-surface {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    rgba(15, 23, 42, 0.75);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.16);
+}
+
 .invoice-view-grid {
   display: grid;
   gap: 0.75rem;
@@ -1141,5 +1149,26 @@
   .ipd__total-card {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
+  }
+
+  .company-report-page {
+    color: #111827 !important;
+  }
+
+  .company-report-page .report-surface,
+  .company-report-page .glass-panel,
+  .company-report-page table,
+  .company-report-page th,
+  .company-report-page td {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+    box-shadow: none !important;
+  }
+
+  .company-report-page .text-muted-foreground,
+  .company-report-page .text-slate-300,
+  .company-report-page .text-slate-400 {
+    color: #475569 !important;
   }
 }

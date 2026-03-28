@@ -12,6 +12,7 @@ import activityLogRouter from "./activity-log";
 import notificationsRouter from "./notifications";
 import usersRouter from "./users";
 import handbookRouter from "./handbook";
+import reportsRouter from "./reports";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -30,5 +31,6 @@ router.use("/activity-log", activityLogRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/users", usersRouter);
 router.use("/handbook", handbookRouter);
+router.use("/reports", reportsRouter);
 
 export default router;

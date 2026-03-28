@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InvoicePrintDocument } from "@/components/invoice-print-document";
 import {
   DX_PRINT_STORAGE_KEY,
+  INVOICE_PRINT_PREVIEW_STORAGE_KEY,
   getInvoicePrintDocumentTitle,
   type InvoicePrintLanguage,
   type PrintInvoiceData,
@@ -50,15 +51,17 @@ export function InvoicePrintPage({ invoiceId }: InvoicePrintPageProps) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !isDxPrint) return;
+    if (typeof window === "undefined") return;
 
     try {
-      const raw = window.sessionStorage.getItem(DX_PRINT_STORAGE_KEY);
+      const storageKey = isDxPrint ? DX_PRINT_STORAGE_KEY : INVOICE_PRINT_PREVIEW_STORAGE_KEY;
+      const raw = window.sessionStorage.getItem(storageKey);
       if (!raw) return;
 
       const parsed = JSON.parse(raw) as { invoiceId?: number; invoice?: PrintInvoiceData };
       if (parsed.invoiceId === invoiceId && parsed.invoice) {
         setOverrideInvoice(parsed.invoice);
+        window.sessionStorage.removeItem(storageKey);
       }
     } catch {
       setOverrideInvoice(null);

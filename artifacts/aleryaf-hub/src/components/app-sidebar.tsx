@@ -7,6 +7,7 @@ import {
   Building2,
   Database,
   FileText,
+  FileSpreadsheet,
   LayoutDashboard,
   LogOut,
   Package,
@@ -40,6 +41,7 @@ const analyticsHubItems = [
   { title: "لوحة التحكم", url: "/", icon: LayoutDashboard },
   { title: "تحليل الفروع", url: "/branch-analytics", icon: BarChart3 },
   { title: "تحليل الأرباح", url: "/profit", icon: TrendingUp },
+  { title: "تقارير الشركة", url: "/reports", icon: FileSpreadsheet },
   { title: "المخزون", url: "/inventory", icon: Box },
 ];
 

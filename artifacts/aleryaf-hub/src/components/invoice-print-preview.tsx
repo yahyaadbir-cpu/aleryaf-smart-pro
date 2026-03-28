@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
-import { type InvoicePrintLanguage, type PrintInvoiceData } from "@/lib/print-invoice";
+import {
+  INVOICE_PRINT_PREVIEW_STORAGE_KEY,
+  type InvoicePrintLanguage,
+  type PrintInvoiceData,
+} from "@/lib/print-invoice";
 import { InvoicePrintDocument } from "@/components/invoice-print-document";
 
 interface InvoicePrintPreviewProps {
@@ -50,6 +54,16 @@ export function InvoicePrintPreview({
 
   const handlePrint = () => {
     if (finalPrintHref) {
+      const matchedInvoiceId = finalPrintHref.match(/\/invoices\/(\d+)\/print/);
+      if (typeof window !== "undefined" && matchedInvoiceId && invoice) {
+        window.sessionStorage.setItem(
+          INVOICE_PRINT_PREVIEW_STORAGE_KEY,
+          JSON.stringify({
+            invoiceId: Number(matchedInvoiceId[1]),
+            invoice,
+          }),
+        );
+      }
       window.location.assign(finalPrintHref);
       return;
     }
