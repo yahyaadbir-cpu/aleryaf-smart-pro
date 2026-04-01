@@ -100,9 +100,7 @@ function getTodayValue() {
 
 export function SalesListPage() {
   const [documentTitle, setDocumentTitle] = useState("Satis Listesi");
-  const [customerName, setCustomerName] = useState("");
   const [documentDate, setDocumentDate] = useState(getTodayValue);
-  const [documentNumber, setDocumentNumber] = useState("SL-001");
   const [printMode, setPrintMode] = useState<SalesPrintMode>("full");
   const [notes, setNotes] = useState("");
   const [itemsText, setItemsText] = useState(DEFAULT_ITEMS);
@@ -120,9 +118,7 @@ export function SalesListPage() {
 
   const handleReset = () => {
     setDocumentTitle("Satis Listesi");
-    setCustomerName("");
     setDocumentDate(getTodayValue());
-    setDocumentNumber("SL-001");
     setPrintMode("full");
     setNotes("");
     setItemsText(DEFAULT_ITEMS);
@@ -169,38 +165,14 @@ export function SalesListPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-foreground">Musteri / Aciklama</label>
+                <label className="text-sm font-bold text-foreground">Tarih</label>
                 <Input
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  className="invoice-input text-left"
+                  type="date"
+                  value={documentDate}
+                  onChange={(event) => setDocumentDate(event.target.value)}
+                  className="invoice-input invoice-input--date text-left"
                   dir="ltr"
-                  placeholder="Musteri adi"
                 />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground">Belge No</label>
-                  <Input
-                    value={documentNumber}
-                    onChange={(event) => setDocumentNumber(event.target.value)}
-                    className="invoice-input text-left"
-                    dir="ltr"
-                    placeholder="SL-001"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground">Tarih</label>
-                  <Input
-                    type="date"
-                    value={documentDate}
-                    onChange={(event) => setDocumentDate(event.target.value)}
-                    className="invoice-input invoice-input--date text-left"
-                    dir="ltr"
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -266,33 +238,16 @@ export function SalesListPage() {
                   <p className="sales-print-subtitle">{APP_NAME_EN}</p>
                 </div>
                 <div className="sales-print-meta">
-                  {printMode === "full" ? (
-                    <>
-                      <div>
-                        <span>Belge No</span>
-                        <strong>{documentNumber || "-"}</strong>
-                      </div>
-                      <div>
-                        <span>Tarih</span>
-                        <strong>{formatTurkishDate(documentDate)}</strong>
-                      </div>
-                      <div>
-                        <span>Musteri</span>
-                        <strong>{customerName || "-"}</strong>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <span>Tarih</span>
-                        <strong>{formatTurkishDate(documentDate)}</strong>
-                      </div>
-                      <div>
-                        <span>Liste Turu</span>
-                        <strong>Faturasiz Satis Listesi</strong>
-                      </div>
-                    </>
-                  )}
+                  <div>
+                    <span>Tarih</span>
+                    <strong>{formatTurkishDate(documentDate)}</strong>
+                  </div>
+                  {printMode === "simple" ? (
+                    <div>
+                      <span>Liste</span>
+                      <strong>Satis Listesi</strong>
+                    </div>
+                  ) : null}
                 </div>
               </header>
 
