@@ -1624,16 +1624,23 @@
   line-height: 1.8;
 }
 
+.ipd__meta-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2.5mm;
+}
+
 .ipd__mode-line {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2mm;
-  padding: 1.6mm 3.2mm;
+  justify-content: center;
+  padding: 1.8mm 4mm;
   border-radius: 999px;
-  background: rgba(14, 71, 80, 0.08);
-  border: 1px solid rgba(213, 162, 54, 0.35);
-  font-size: 13px;
+  background: rgba(14, 71, 80, 0.1);
+  border: 1px solid rgba(213, 162, 54, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  font-size: 14px;
   line-height: 1.4;
 }
 

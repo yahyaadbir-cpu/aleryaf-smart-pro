@@ -18,7 +18,6 @@ const COPY = {
     companyName: APP_NAME_AR,
     brandTag: "قائمة أسعار",
     title: "قائمة مبيعات",
-    eyebrow: "ALERYAF TRADING COMPANY",
     date: "التاريخ",
     mode: "النوع",
     item: "الصنف",
@@ -35,7 +34,6 @@ const COPY = {
     companyName: "Aleryaf Ticaret Şirketi",
     brandTag: "Satış Listesi",
     title: "Satış Listesi",
-    eyebrow: "ALERYAF TRADING COMPANY",
     date: "Tarih",
     mode: "Tür",
     item: "Ürün",
@@ -100,16 +98,16 @@ export function SalesListPrintDocument({
 
         <div className="ipd__invoice-meta">
           <h1 className="ipd__title">{copy.title}</h1>
-          <div className="ipd__meta-line">
-            {copy.date}: {formatDateByLanguage(salesDate, language)}
-          </div>
-          {showMode ? (
-            <div className="ipd__mode-line">
-              <span className="ipd__mode-label">{copy.mode}:</span>{" "}
-              <span className="ipd__mode-value">{printMode === "full" ? copy.fullMode : copy.simpleMode}</span>
+          <div className="ipd__meta-stack">
+            <div className="ipd__meta-line">
+              {copy.date}: {formatDateByLanguage(salesDate, language)}
             </div>
-          ) : null}
-          <div className="ipd__eyebrow ipd__eyebrow--footer">{copy.eyebrow}</div>
+            {showMode ? (
+              <div className="ipd__mode-line">
+                <span className="ipd__mode-value">{printMode === "full" ? copy.fullMode : copy.simpleMode}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
