@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/http";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/lib/activity";
+import logoUrl from "@assets/aleryaf-logo-clean.png";
 
 type SalesPrintMode = "full" | "simple";
 
@@ -396,10 +397,15 @@ export function SalesListPage() {
               dir="ltr"
             >
               <header className="sales-print-header">
-                <div>
-                  <div className="sales-print-kicker">ALERYAF</div>
-                  <h2 className="sales-print-title">{documentTitle || "Satis Listesi"}</h2>
-                  <p className="sales-print-subtitle">{APP_NAME_EN}</p>
+                <div className="sales-print-brand">
+                  <div className="sales-print-logo-shell" aria-hidden="true">
+                    <img src={logoUrl} alt="Aleryaf logo" className="sales-print-logo" />
+                  </div>
+                  <div>
+                    <div className="sales-print-kicker">ALERYAF</div>
+                    <h2 className="sales-print-title">{documentTitle || "Satis Listesi"}</h2>
+                    <p className="sales-print-subtitle">{APP_NAME_EN}</p>
+                  </div>
                 </div>
                 <div className="sales-print-meta">
                   <div>

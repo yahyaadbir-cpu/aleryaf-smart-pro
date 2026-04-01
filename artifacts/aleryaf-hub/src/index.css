@@ -1089,6 +1089,32 @@
   border-bottom: 1px solid rgba(148, 163, 184, 0.3);
 }
 
+.sales-print-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sales-print-logo-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.sales-print-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .sales-print-kicker {
   font-size: 11px;
   font-weight: 800;
@@ -1348,6 +1374,10 @@
   .sales-print-header,
   .sales-print-footer {
     grid-template-columns: 1fr;
+  }
+
+  .sales-print-brand {
+    align-items: center;
   }
 
   .sales-print-summary {
