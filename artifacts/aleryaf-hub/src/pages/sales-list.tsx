@@ -60,7 +60,6 @@ const COPY = {
   tr: {
     defaultTitle: "Satış Listesi",
     companyName: APP_NAME_EN,
-    titleLabel: "Başlık",
     languageLabel: "Dil",
     languageTurkish: "Türkçe",
     languageArabic: "العربية",
@@ -84,7 +83,6 @@ const COPY = {
   ar: {
     defaultTitle: "قائمة مبيعات",
     companyName: APP_NAME_AR,
-    titleLabel: "العنوان",
     languageLabel: "اللغة",
     languageTurkish: "Türkçe",
     languageArabic: "العربية",
@@ -225,7 +223,6 @@ export function SalesListPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [printLanguage, setPrintLanguage] = useState<SalesPrintLanguage>("tr");
-  const [documentTitle, setDocumentTitle] = useState<string>(getDefaultTitle("tr"));
   const [documentDate, setDocumentDate] = useState(getTodayValue);
   const [printMode, setPrintMode] = useState<SalesPrintMode>("full");
   const [notes, setNotes] = useState("");
@@ -267,14 +264,10 @@ export function SalesListPage() {
   };
 
   const handleLanguageChange = (nextLanguage: SalesPrintLanguage) => {
-    setDocumentTitle((currentTitle) =>
-      currentTitle === getDefaultTitle(printLanguage) ? getDefaultTitle(nextLanguage) : currentTitle,
-    );
     setPrintLanguage(nextLanguage);
   };
 
   const handleReset = () => {
-    setDocumentTitle(getDefaultTitle(printLanguage));
     setDocumentDate(getTodayValue());
     setPrintMode("full");
     setNotes("");
@@ -301,7 +294,7 @@ export function SalesListPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: documentTitle.trim() || getDefaultTitle(printLanguage),
+          title: getDefaultTitle(printLanguage),
           printMode,
           salesDate: documentDate,
           notes,
@@ -339,7 +332,6 @@ export function SalesListPage() {
   };
 
   const loadSavedListIntoEditor = (saved: SavedSalesList) => {
-    setDocumentTitle(saved.title);
     setDocumentDate(saved.salesDate);
     setPrintMode(saved.printMode);
     setNotes(saved.notes);
@@ -385,17 +377,6 @@ export function SalesListPage() {
         <div className="grid gap-4 2xl:grid-cols-[380px_minmax(0,1fr)_320px]">
           <Card className="screen-only border-white/8 bg-[#0f0f10] shadow-none">
             <CardContent className="space-y-4 p-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-foreground">{copy.titleLabel}</label>
-                <Input
-                  value={documentTitle}
-                  onChange={(event) => setDocumentTitle(event.target.value)}
-                  className="invoice-input text-left"
-                  dir={printLanguage === "tr" ? "ltr" : "rtl"}
-                  placeholder={copy.defaultTitle}
-                />
-              </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-bold text-foreground">{copy.languageLabel}</label>
                 <div className="invoice-segmented flex items-center gap-1 rounded-2xl p-1">
@@ -489,7 +470,7 @@ export function SalesListPage() {
                 <div className="sales-print-brand">
                   <div className="sales-print-brand-copy">
                     <div className="sales-print-kicker">ALERYAF</div>
-                    <h2 className="sales-print-title">{documentTitle || copy.printTitle}</h2>
+                    <h2 className="sales-print-title">{copy.printTitle}</h2>
                     <p className="sales-print-subtitle">{copy.companyName}</p>
                   </div>
                 </div>
