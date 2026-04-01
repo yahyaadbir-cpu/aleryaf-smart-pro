@@ -16,6 +16,7 @@ import { ItemsPage } from "@/pages/items";
 import { InvoicesPage } from "@/pages/invoices";
 import { InvoiceDxPage } from "@/pages/invoice-dx";
 import { InvoicePrintPage } from "@/pages/invoice-print";
+import { SalesListPage } from "@/pages/sales-list";
 import { BranchesPage } from "@/pages/branches";
 import { LoginPage } from "@/pages/login";
 import { AdminLogPage } from "@/pages/admin-log";
@@ -109,6 +110,9 @@ function Router() {
       </Route>
       <Route path="/invoices">
         {() => <AuthGuard><InvoicesPage /></AuthGuard>}
+      </Route>
+      <Route path="/sales-list">
+        {() => <AuthGuard><SalesListPage /></AuthGuard>}
       </Route>
       <Route path="/invoices/:id/print">
         {(params) => <AuthGuard><InvoicePrintPage invoiceId={Number(params.id)} /></AuthGuard>}

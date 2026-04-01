@@ -2,15 +2,16 @@ import { Link, useLocation } from "wouter";
 import {
   Activity,
   BarChart3,
-  Box,
   BookOpenText,
+  Box,
   Building2,
   Database,
-  FileText,
   FileSpreadsheet,
+  FileText,
   LayoutDashboard,
   LogOut,
   Package,
+  ReceiptText,
   Terminal,
   TrendingUp,
   Users,
@@ -33,6 +34,7 @@ import { useAuth } from "@/context/auth";
 
 const invoiceSystemItems = [
   { title: "الفواتير", url: "/invoices", icon: FileText },
+  { title: "قائمة المبيعات", url: "/sales-list", icon: ReceiptText },
   { title: "المنتجات", url: "/items", icon: Package },
   { title: "إدارة الفروع", url: "/branches", icon: Building2 },
 ];

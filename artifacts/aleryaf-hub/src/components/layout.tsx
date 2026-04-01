@@ -4,13 +4,13 @@ import { AppSidebar } from "./app-sidebar";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { APP_NAME_AR } from "@/lib/branding";
 import {
-  LayoutDashboard,
-  TrendingUp,
-  Package,
   Box,
   FileText,
-  BarChart3,
+  LayoutDashboard,
   Menu,
+  Package,
+  ReceiptText,
+  TrendingUp,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -20,9 +20,9 @@ interface LayoutProps {
 const mobileNavItems = [
   { title: "لوحة التحكم", url: "/", icon: LayoutDashboard },
   { title: "الفواتير", url: "/invoices", icon: FileText },
+  { title: "المبيعات", url: "/sales-list", icon: ReceiptText },
   { title: "المنتجات", url: "/items", icon: Package },
   { title: "المخزون", url: "/inventory", icon: Box },
-  { title: "الفروع", url: "/branch-analytics", icon: BarChart3 },
 ];
 
 export function Layout({ children }: LayoutProps) {
