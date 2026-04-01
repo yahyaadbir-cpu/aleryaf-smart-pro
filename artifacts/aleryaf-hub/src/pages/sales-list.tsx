@@ -1,11 +1,15 @@
-import { useMemo, useState } from "react";
-import { Printer, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Download, Printer, RotateCcw, Save } from "lucide-react";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { APP_NAME_EN } from "@/lib/branding";
+import { apiFetch } from "@/lib/http";
+import { useAuth } from "@/context/auth";
+import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/lib/activity";
 
 type SalesPrintMode = "full" | "simple";
 
@@ -13,6 +17,18 @@ interface SalesLine {
   id: string;
   name: string;
   pricePerKg: number | null;
+}
+
+interface SavedSalesList {
+  id: number;
+  title: string;
+  printMode: SalesPrintMode;
+  salesDate: string;
+  notes: string;
+  itemsText: string;
+  totalAmount: number;
+  createdBy: string | null;
+  createdAt: string | null;
 }
 
 const DEFAULT_ITEMS = [
@@ -104,17 +120,46 @@ function getTodayValue() {
 }
 
 export function SalesListPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [documentTitle, setDocumentTitle] = useState("Satis Listesi");
   const [documentDate, setDocumentDate] = useState(getTodayValue);
   const [printMode, setPrintMode] = useState<SalesPrintMode>("full");
   const [notes, setNotes] = useState("");
   const [itemsText, setItemsText] = useState(DEFAULT_ITEMS);
+  const [savedLists, setSavedLists] = useState<SavedSalesList[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSavedLists, setIsLoadingSavedLists] = useState(true);
+  const [activeSavedListId, setActiveSavedListId] = useState<number | null>(null);
 
   const salesLines = useMemo(() => parseSalesLines(itemsText), [itemsText]);
   const totalAmount = useMemo(
     () => salesLines.reduce((sum, line) => sum + (toPricePerTon(line.pricePerKg) ?? 0), 0),
     [salesLines],
   );
+
+  const loadSavedLists = async () => {
+    setIsLoadingSavedLists(true);
+    try {
+      const response = await apiFetch("/api/sales-lists");
+      if (!response.ok) {
+        throw new Error("load failed");
+      }
+      const data = (await response.json()) as SavedSalesList[];
+      setSavedLists(data);
+    } catch {
+      toast({
+        title: "تعذر تحميل القوائم المحفوظة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSavedLists(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSavedLists().catch(() => undefined);
+  }, []);
 
   const handlePrint = () => {
     window.focus();
@@ -127,6 +172,70 @@ export function SalesListPage() {
     setPrintMode("full");
     setNotes("");
     setItemsText(DEFAULT_ITEMS);
+    setActiveSavedListId(null);
+  };
+
+  const handleSave = async () => {
+    if (!itemsText.trim()) {
+      toast({
+        title: "أدخل عناصر القائمة أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await apiFetch("/api/sales-lists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: documentTitle.trim() || "Satis Listesi",
+          printMode,
+          salesDate: documentDate,
+          notes,
+          itemsText,
+          totalAmount,
+          createdBy: user?.username,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("save failed");
+      }
+
+      const saved = (await response.json()) as SavedSalesList;
+      setSavedLists((current) => [saved, ...current]);
+      setActiveSavedListId(saved.id);
+      toast({
+        title: "تم حفظ قائمة المبيعات",
+      });
+      if (user) {
+        logActivity(
+          user.username,
+          "حفظ قائمة مبيعات",
+          `${saved.title} | ${saved.salesDate} | ${saved.printMode === "full" ? "Tam Fatura" : "Faturasiz"}`,
+        );
+      }
+    } catch {
+      toast({
+        title: "تعذر حفظ قائمة المبيعات",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const loadSavedListIntoEditor = (saved: SavedSalesList) => {
+    setDocumentTitle(saved.title);
+    setDocumentDate(saved.salesDate);
+    setPrintMode(saved.printMode);
+    setNotes(saved.notes);
+    setItemsText(saved.itemsText);
+    setActiveSavedListId(saved.id);
   };
 
   return (
@@ -136,7 +245,7 @@ export function SalesListPage() {
           <div>
             <h1 className="invoice-page-title font-display font-bold text-foreground">قائمة مبيعات</h1>
             <p className="invoice-page-subtitle">
-              جهز كشف مبيعات باللغة التركية ثم اطبعه أو احفظه كملف PDF.
+              احفظ كل قائمة مبيعات مع تاريخها ونوعها ثم أعد فتحها أو اطبعها لاحقاً.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -148,6 +257,15 @@ export function SalesListPage() {
               <RotateCcw className="ml-2 h-4 w-4" />
               إعادة تعيين
             </Button>
+            <Button
+              variant="outline"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="invoice-action-button border-white/10 text-white hover:bg-white/5"
+            >
+              <Save className="ml-2 h-4 w-4" />
+              {isSaving ? "جارٍ الحفظ..." : "حفظ القائمة"}
+            </Button>
             <Button onClick={handlePrint} className="invoice-action-button invoice-action-button--primary text-white">
               <Printer className="ml-2 h-4 w-4" />
               طباعة / PDF
@@ -155,7 +273,7 @@ export function SalesListPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="grid gap-4 2xl:grid-cols-[380px_minmax(0,1fr)_320px]">
           <Card className="screen-only border-white/8 bg-[#0f0f10] shadow-none">
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
@@ -185,21 +303,21 @@ export function SalesListPage() {
                 <div className="invoice-segmented flex items-center gap-1 rounded-2xl p-1">
                   <button
                     type="button"
-                    onClick={() => setPrintMode("full")}
-                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
-                      printMode === "full" ? "invoice-segmented__active text-white" : "text-slate-300"
-                    }`}
-                  >
-                    Tam Fatura
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setPrintMode("simple")}
                     className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
                       printMode === "simple" ? "invoice-segmented__active text-white" : "text-slate-300"
                     }`}
                   >
                     Faturasiz Liste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintMode("full")}
+                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-bold transition ${
+                      printMode === "full" ? "invoice-segmented__active text-white" : "text-slate-300"
+                    }`}
+                  >
+                    Tam Fatura
                   </button>
                 </div>
               </div>
@@ -315,6 +433,61 @@ export function SalesListPage() {
               </footer>
             </article>
           </div>
+
+          <Card className="screen-only border-white/8 bg-[#0f0f10] shadow-none">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">القوائم المحفوظة</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">كل قائمة تحفظ مع التاريخ والنوع والإجمالي.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadSavedLists().catch(() => undefined)}
+                  className="border-white/10 text-white hover:bg-white/5"
+                >
+                  <Download className="ml-2 h-3.5 w-3.5" />
+                  تحديث
+                </Button>
+              </div>
+
+              <div className="sales-saved-list">
+                {isLoadingSavedLists ? (
+                  <div className="sales-saved-list__empty">جارٍ تحميل القوائم...</div>
+                ) : savedLists.length === 0 ? (
+                  <div className="sales-saved-list__empty">لا توجد قوائم مبيعات محفوظة بعد.</div>
+                ) : (
+                  savedLists.map((saved) => (
+                    <button
+                      key={saved.id}
+                      type="button"
+                      onClick={() => loadSavedListIntoEditor(saved)}
+                      className={`sales-saved-card ${
+                        activeSavedListId === saved.id ? "sales-saved-card--active" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 text-right">
+                          <div className="truncate text-sm font-bold text-foreground">{saved.title}</div>
+                          <div className="mt-1 text-[11px] text-muted-foreground">
+                            {formatTurkishDate(saved.salesDate)}
+                          </div>
+                        </div>
+                        <div className="sales-saved-card__badge">
+                          {saved.printMode === "full" ? "Tam Fatura" : "Faturasiz"}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">{saved.createdBy || "بدون مستخدم"}</span>
+                        <strong className="text-foreground">{formatTry(saved.totalAmount)}</strong>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </Layout>

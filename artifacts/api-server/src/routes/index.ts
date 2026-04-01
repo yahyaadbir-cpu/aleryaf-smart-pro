@@ -13,6 +13,7 @@ import notificationsRouter from "./notifications";
 import usersRouter from "./users";
 import handbookRouter from "./handbook";
 import reportsRouter from "./reports";
+import salesListsRouter from "./sales-lists";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -29,6 +30,7 @@ router.use("/inventory", inventoryRouter);
 router.use("/profit", profitRouter);
 router.use("/activity-log", activityLogRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/sales-lists", salesListsRouter);
 router.use("/users", usersRouter);
 router.use("/handbook", handbookRouter);
 router.use("/reports", reportsRouter);
