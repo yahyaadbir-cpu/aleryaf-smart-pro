@@ -225,7 +225,7 @@ export function SalesListPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [printLanguage, setPrintLanguage] = useState<SalesPrintLanguage>("tr");
-  const [documentTitle, setDocumentTitle] = useState(getDefaultTitle("tr"));
+  const [documentTitle, setDocumentTitle] = useState<string>(getDefaultTitle("tr"));
   const [documentDate, setDocumentDate] = useState(getTodayValue);
   const [printMode, setPrintMode] = useState<SalesPrintMode>("full");
   const [notes, setNotes] = useState("");
